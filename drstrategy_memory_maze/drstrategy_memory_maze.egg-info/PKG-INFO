@@ -1,0 +1,116 @@
+Metadata-Version: 2.4
+Name: drstrategy-memory-maze
+Version: 1.0.0
+Summary: DrStrategy Memory Maze environments with Gymnasium compatibility
+Home-page: https://github.com/anthropics/claude-code
+Author: Claude Code
+Author-email: noreply@anthropic.com
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: memory-maze
+Requires-Dist: gymnasium
+Requires-Dist: dm_control
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Requires-Dist: pillow
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# DrStrategy Memory Maze
+
+A clean, simplified Gymnasium-compatible implementation of DrStrategy Memory Maze environments.
+
+## Features
+
+- **🎯 Simple & Clean**: Minimal codebase focused on core functionality
+- **🏃 Gymnasium Ready**: Full compatibility with Farama Foundations Gymnasium
+- **🏢 Multiple Mazes**: Five different maze layouts for varied challenges
+- **🎮 Discrete Actions**: Optimized for discrete action spaces
+
+## Installation
+
+```bash
+pip install -e .
+```
+
+## Quick Start
+
+```python
+import gymnasium as gym
+import drstrategy_memory_maze
+
+# Create environment
+env = gym.make('DrStrategy-MemoryMaze-4x7x7-v0')
+
+# Use it like any Gym environment
+obs, info = env.reset()
+for _ in range(100):
+    action = env.action_space.sample()
+    obs, reward, terminated, truncated, info = env.step(action)
+    if terminated or truncated:
+        obs, info = env.reset()
+```
+
+## Available Environments
+
+| Environment ID | Description | Layout | Max Steps |
+|---------------|-------------|---------|-----------|
+| `DrStrategy-MemoryMaze-4x7x7-v0` | Four rooms, small | 7×7 | 500 |
+| `DrStrategy-MemoryMaze-4x15x15-v0` | Four rooms, large | 15×15 | 1000 |
+| `DrStrategy-MemoryMaze-8x30x30-v0` | Eight rooms, extra large | 30×30 | 2000 |
+| `DrStrategy-MemoryMaze-mzx7x7-v0` | Custom maze, small | 7×7 | 500 |
+| `DrStrategy-MemoryMaze-mzx15x15-v0` | Custom maze, large | 15×15 | 1000 |
+
+## Direct Environment Creation
+
+```python
+from drstrategy_memory_maze import MemoryMaze
+
+# Create environment directly with more control
+env = MemoryMaze(
+    task='4x7x7',           # Maze layout
+    discrete_actions=True   # Action type
+)
+```
+
+## Architecture
+
+The package consists of just two main modules:
+
+- **`maze_layouts.py`**: Defines maze layouts and metadata
+- **`envs.py`**: Main environment class wrapping memory_maze
+
+This design keeps the codebase minimal while leveraging the robust `memory-maze` package for the heavy lifting.
+
+## Dependencies
+
+- `memory-maze`: Our refactored memory-maze package
+- `gymnasium`: Modern RL environment interface  
+- `dm_control`: Physics simulation backend
+
+## License
+
+MIT License

@@ -1,0 +1,4 @@
+miniworld>=2.1.0
+gymnasium>=0.29.0
+numpy>=1.22.0
+pyglet<2.0,>=1.5.27

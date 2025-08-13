@@ -1,0 +1,10 @@
+memory-maze
+gymnasium
+dm_control
+numpy
+matplotlib
+pillow
+
+[dev]
+pytest
+pytest-cov
