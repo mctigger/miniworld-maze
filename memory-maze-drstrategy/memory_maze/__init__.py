@@ -124,6 +124,35 @@ try:
             top_camera=True,
         ),
     )
+
+    # Create a custom gym environment class that accepts camera_resolution parameter
+    class FlexibleMemoryMazeEnv(gym.Env):
+        def __init__(self, dm_task_fn, camera_resolution=64, **kwargs):
+            self._dm_env = GymWrapper(dm_task_fn(camera_resolution=camera_resolution, **kwargs))
+            self.observation_space = self._dm_env.observation_space
+            self.action_space = self._dm_env.action_space
+        
+        def step(self, action):
+            return self._dm_env.step(action)
+        
+        def reset(self, **kwargs):
+            return self._dm_env.reset(**kwargs)
+        
+        def render(self, mode='human'):
+            return self._dm_env.render(mode)
+        
+        def close(self):
+            return self._dm_env.close()
+    
+    # Register flexible resolution environment
+    register(
+        id='MemoryMaze-four-rooms-7x7-fixed-layout-flexible-v0',
+        entry_point=FlexibleMemoryMazeEnv,
+        kwargs={
+            'dm_task_fn': tasks.memory_maze_four_rooms_7x7_fixed_layout,
+            'image_only_obs': True,
+        },
+    )
     register(
         id=f'MemoryMaze-four-rooms-7x7-fixed-layout-random-goals-v0',
         entry_point=f(

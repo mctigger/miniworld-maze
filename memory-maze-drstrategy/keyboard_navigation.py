@@ -119,7 +119,7 @@ def keymap_to_text():
     return lines
 
 
-def run_navigation(env_id: str, render_size: tuple, fps: int, backend: str):
+def run_navigation(env_id: str, render_size: tuple, fps: int, backend: str, camera_resolution: int = None):
     """Run the keyboard navigation interface."""
     
     # Set up backend
@@ -129,8 +129,18 @@ def run_navigation(env_id: str, render_size: tuple, fps: int, backend: str):
     import gymnasium as gym
     import memory_maze  # This triggers environment registration
     
-    print(f"Creating environment: {env_id}")
-    env = gym.make(env_id)
+    # Use flexible environment with custom resolution if specified
+    if camera_resolution:
+        if env_id == "MemoryMaze-four-rooms-7x7-fixed-layout-v0":
+            env_id = "MemoryMaze-four-rooms-7x7-fixed-layout-flexible-v0"
+            print(f"Using flexible environment with camera resolution: {camera_resolution}")
+            env = gym.make(env_id, camera_resolution=camera_resolution)
+        else:
+            print(f"Camera resolution specified ({camera_resolution}) but environment {env_id} doesn't support flexible resolution")
+            env = gym.make(env_id)
+    else:
+        print(f"Creating environment: {env_id}")
+        env = gym.make(env_id)
     
     print("Observation space:", env.observation_space)
     print("Action space:", env.action_space)
@@ -311,13 +321,15 @@ def main():
     parser = argparse.ArgumentParser(description="Navigate Memory Maze with keyboard")
     parser.add_argument("--env-id", default="auto",
                        help="Environment ID (default: auto-detect 7x7)")
-    parser.add_argument("--size", type=int, nargs=2, default=[480, 480],
-                       help="Render size in pixels (default: 480x480)")
+    parser.add_argument("--size", type=int, nargs=2, default=[1024, 1024],
+                       help="Render size in pixels (default: 1024x1024)")
     parser.add_argument("--fps", type=int, default=10,
                        help="Frames per second (default: 10)")
     parser.add_argument("--backend", default="auto",
                        choices=["auto", "glfw", "egl", "osmesa"],
                        help="MUJOCO_GL backend (default: auto)")
+    parser.add_argument("--camera-resolution", type=int, 
+                       help="Camera resolution for environment rendering (e.g., 64, 128, 256, 512)")
     
     args = parser.parse_args()
     
@@ -330,7 +342,7 @@ def main():
             env_id = args.env_id
         
         # Run navigation
-        run_navigation(env_id, tuple(args.size), args.fps, args.backend)
+        run_navigation(env_id, tuple(args.size), args.fps, args.backend, args.camera_resolution)
         
     except KeyboardInterrupt:
         print("\nInterrupted by user")

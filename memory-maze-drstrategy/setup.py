@@ -19,6 +19,8 @@ setup(
         'gymnasium>=0.29.1,<1.0.0',
         'dm_control',
         'mujoco',
-        'numpy>=1.26,<2.3'
+        'numpy>=1.26,<2.3',
+        'pygame',
+        'Pillow'
     ],
 )
