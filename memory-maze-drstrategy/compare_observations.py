@@ -13,8 +13,7 @@ import memory_maze
 def capture_observations(env_id, num_steps=10, camera_resolution=256, output_prefix="obs"):
     """Capture observations from an environment and save as images."""
     
-    # Set up environment
-    os.environ['MUJOCO_GL'] = 'osmesa'
+    # Environment setup (MUJOCO_GL should be set by user)
     
     print(f"Creating environment: {env_id}")
     if camera_resolution:
