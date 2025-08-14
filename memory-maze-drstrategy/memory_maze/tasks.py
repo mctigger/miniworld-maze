@@ -171,6 +171,7 @@ def memory_maze_cmaze_7x7_fixed_layout(**kwargs):
         time_limit=500,
         target_color_in_image=False,
         seed=42,
+        no_wall_patterns=True,  # Use flat colored walls instead of textured walls
         **kwargs,
     )
 
@@ -183,6 +184,7 @@ def memory_maze_cmaze_15x15_fixed_layout(**kwargs):
         time_limit=1000,
         target_color_in_image=False,
         seed=42,
+        no_wall_patterns=True,  # Use flat colored walls instead of textured walls
         **kwargs,
     )
 
