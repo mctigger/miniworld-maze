@@ -172,6 +172,7 @@ def memory_maze_cmaze_7x7_fixed_layout(**kwargs):
         target_color_in_image=False,
         seed=42,
         no_wall_patterns=True,  # Use flat colored walls instead of textured walls
+        sky=True,  # Enable skybox for background objects
         **kwargs,
     )
 
@@ -185,6 +186,7 @@ def memory_maze_cmaze_15x15_fixed_layout(**kwargs):
         target_color_in_image=False,
         seed=42,
         no_wall_patterns=True,  # Use flat colored walls instead of textured walls
+        sky=True,  # Enable skybox for background objects
         **kwargs,
     )
 
