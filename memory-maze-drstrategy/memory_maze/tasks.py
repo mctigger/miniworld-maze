@@ -14,117 +14,15 @@ from memory_maze.maze import *
 from memory_maze.oracle import DrawMinimapWrapper, PathToTargetWrapper
 from memory_maze.wrappers import *
 
+# Import original DrStrategy texture classes and functions
+from memory_maze.custom_task import (
+    CWallTexture, CFixedFloorTexture2, CMazeWithTargetsArenaFixedLayout,
+    C_memory_maze_fixed_layout, CMaze_7x7_LAYOUT, CMaze_15x15_LAYOUT
+)
+
 # Slow control (4Hz), so that agent without HRL has a chance.
 # Native control would be ~20Hz, so this corresponds roughly to action_repeat=5.
 DEFAULT_CONTROL_FREQ = 4.0
-
-
-# DrStrategy Custom Texture Classes (from original DrStrategy implementation)
-
-class CWallTexture(labmaze_textures.WallTextures):
-    def _build(self, color=[0.8, 0.8, 0.8], model='labmaze_style_01'):
-        labmaze_textures = labmaze_assets.get_wall_texture_paths('style_01')
-        texture_path = labmaze_textures['blue']
-        self._mjcf_root = mjcf.RootElement(model=model)
-        im_frame = Image.open(texture_path)
-        im_frame = im_frame.convert('RGB')
-        np_frame = np.array(im_frame)
-        new_color = np.array(color)
-        non_black_mask = (np_frame[:, :, :3] > [70, 70, 70]).any(axis=-1)
-        np_frame[non_black_mask] = new_color
-        image = Image.fromarray(np_frame)
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-            image.save(temp_file.name)
-            valid_name = temp_file.name.split('/')[-1]
-            self._textures= [self._mjcf_root.asset.add(
-                'texture', type='2d', name=f'wall_{valid_name}',
-                file=temp_file.name)]
-
-
-class CFixedFloorTexture2(labmaze_textures.FloorTextures):
-    """Selects a single texture instead of a collection to sample from."""
-    
-    def _build(self, style, colors):
-        self._mjcf_root = mjcf.RootElement(model='labmaze_' + style)
-        self._textures = []
-        for i,color in enumerate(colors):
-            self._textures.append(self._mjcf_root.asset.add(
-                'texture', type='2d', name='floor'+str(i), builtin='flat',
-                rgb1=color, width=100, height=100))
-    
-    def append(self, texture):
-        self._textures.extend(texture._textures)
-
-
-# DrStrategy Custom Arena Class with proper texture variations
-class CMazeWithTargetsArenaFixedLayout(MazeWithTargetsArenaFixedLayout):
-    def _block_variations(self):
-        nblocks = 3
-        _DEFAULT_FLOOR_CHAR = '.'
-        floor_chars = _DEFAULT_FLOOR_CHAR + string.ascii_uppercase
-        n, m = self._maze.variations_layer.shape[:2]
-        mblocks = m * nblocks // n
-        if mblocks <= 1:
-            mblocks = 1
-        elif 10 % mblocks == 0:
-            mblocks -= 1
-        ivar = 0
-        for i in range(nblocks):
-            for j in range(mblocks):
-                i_from = i * n // nblocks
-                i_to = (i + 1) * n // nblocks
-                j_from = j * m // mblocks
-                j_to = (j + 1) * m // mblocks
-                self._change_block_char(i_from, i_to, j_from, j_to, floor_chars[ivar])
-                ivar = (ivar + 1) % 10
-
-    def _change_block_char(self, i1, i2, j1, j2, char):
-        grid = self._maze.variations_layer
-        i, j = np.where(grid[i1:i2, j1:j2] == '.')
-        grid[i + i1, j + j1] = char
-    
-    def regenerate(self, random_state):
-        """Generates a new maze layout. Patch of MazeWithTargets.regenerate() which uses random_state."""        
-        self._maze.regenerate()
-        self._find_spawn_and_target_positions()
-
-        if self._text_maze_regenerated_hook:
-            self._text_maze_regenerated_hook()
-
-        # Remove old texturing planes.
-        for geom_name in self._texturing_geom_names:
-            del self._mjcf_root.worldbody.geom[geom_name]
-        self._texturing_geom_names = []
-
-        # Remove old texturing materials.
-        for material_name in self._texturing_material_names:
-            del self._mjcf_root.asset.material[material_name]
-        self._texturing_material_names = []
-
-        # Remove old actual-wall geoms.
-        self._maze_body.geom.clear()
-        
-        # Fixed random state for consistent wall textures
-        random_state_fixed_wall = np.random.RandomState(2)
-
-        self._current_wall_texture = {
-            # Use first texture instead of random choice for consistency
-            wall_char: wall_textures[0]
-            for wall_char, wall_textures in self._wall_textures.items()
-        }
-        for wall_char in self._wall_textures:
-            self._make_wall_geoms(wall_char)
-        self._make_floor_variations()
-
-    def _make_floor_variations(self, build_tile_geoms_fn=None):
-        """Fork of mazes.MazeWithTargets._make_floor_variations().
-        Makes the room floors different if possible, instead of sampling randomly.
-        """
-        # Apply block variations first
-        self._block_variations()
-        
-        # Call parent class method to handle the floor variations properly
-        super()._make_floor_variations(build_tile_geoms_fn)
 
 
 def memory_maze_single_room_3x3(**kwargs):
@@ -197,18 +95,7 @@ def memory_maze_two_rooms_3x7_fixed_layout_random_goals(**kwargs):
     )
 
 
-# Original DrStrategy complex maze layout
-CMAZE_7x7_LAYOUT = """
-*********
-*P  *G  *
-*** *** *
-*G*     *
-* *** ***
-*     *G*
-* ***   *
-* G*G   *
-*********
-"""[1:]
+# Layout definitions are imported from custom_task.py
 
 # Simple four rooms layout (original memory-maze-drstrategy)
 FOUR_ROOMS_7x7_LAYOUT = """
@@ -223,26 +110,7 @@ FOUR_ROOMS_7x7_LAYOUT = """
 *********
 """[1:]
 
-# Original DrStrategy 15x15 complex maze layout
-CMAZE_15x15_LAYOUT = """
-*****************
-***P      *     *
-*** *  G* *   * *
-*       * *  G* *
-*   * *** ***** *
-*         *     *
-* ***   * * *** *
-*G      *   *   *
-*** *** * * *  G*
-*** *     * *   *
-*** * *   * * * *
-*     *G      * *
-* *** * * *  G* *
-*  G      *   * *
-*   *   * *** * *
-*   *  G*       *
-*****************
-"""[1:]
+# CMAZE_15x15_LAYOUT is imported from custom_task.py
 
 
 FOUR_ROOMS_7x7_LAYOUT_RANDOM_GOALS = """
@@ -296,65 +164,25 @@ def memory_maze_four_rooms_7x7_fixed_layout(**kwargs):
 
 
 def memory_maze_cmaze_7x7_fixed_layout(**kwargs):
-    """DrStrategy original 7x7 complex maze layout with original textures"""
-    # Set up DrStrategy original texture configuration
-    cmap = plt.get_cmap('tab20')
-    
-    # Wall textures using custom CWallTexture with tab20 colors
-    wall_textures = {'*': CWallTexture([0.8, 0.8, 0.8])}
-    for index in range(10):
-        wall_textures[str(index)] = CWallTexture([int(i*255) for i in cmap(index*2)[:3]])
-    for index, idx1 in enumerate([i for i in range(1, 20, 2)]):
-        wall_textures[str(index+10)] = CWallTexture([int(i*255) for i in cmap(idx1*2)[:3]])
-    
-    # Floor textures using custom CFixedFloorTexture2 with tab20 colors
-    floor_colors = []
-    for index in range(10):
-        floor_colors.append([int(i*255) for i in cmap(index*2)[:3]])
-    for index, idx1 in enumerate([i for i in range(1, 20, 2)]):
-        floor_colors.append([int(i*255) for i in cmap(idx1*2)[:3]])
-    floor_textures = CFixedFloorTexture2('style_01', floor_colors)
-    
-    return _memory_maze_fixed_layout(
-        entity_layer=CMAZE_7x7_LAYOUT,
-        n_targets=6,
-        time_limit=float('inf'),
+    """DrStrategy original 7x7 complex maze layout using original DrStrategy function"""
+    return C_memory_maze_fixed_layout(
+        entity_layer=CMaze_7x7_LAYOUT,
+        n_targets=4,
+        time_limit=500,
         target_color_in_image=False,
         seed=42,
-        wall_textures=wall_textures,
-        floor_textures=floor_textures,
         **kwargs,
     )
 
 
 def memory_maze_cmaze_15x15_fixed_layout(**kwargs):
-    """DrStrategy original 15x15 complex maze layout with original textures"""
-    # Set up DrStrategy original texture configuration
-    cmap = plt.get_cmap('tab20')
-    
-    # Wall textures using custom CWallTexture with tab20 colors
-    wall_textures = {'*': CWallTexture([0.8, 0.8, 0.8])}
-    for index in range(10):
-        wall_textures[str(index)] = CWallTexture([int(i*255) for i in cmap(index*2)[:3]])
-    for index, idx1 in enumerate([i for i in range(1, 20, 2)]):
-        wall_textures[str(index+10)] = CWallTexture([int(i*255) for i in cmap(idx1*2)[:3]])
-    
-    # Floor textures using custom CFixedFloorTexture2 with tab20 colors
-    floor_colors = []
-    for index in range(10):
-        floor_colors.append([int(i*255) for i in cmap(index*2)[:3]])
-    for index, idx1 in enumerate([i for i in range(1, 20, 2)]):
-        floor_colors.append([int(i*255) for i in cmap(idx1*2)[:3]])
-    floor_textures = CFixedFloorTexture2('style_01', floor_colors)
-    
-    return _memory_maze_fixed_layout(
-        entity_layer=CMAZE_15x15_LAYOUT,
-        n_targets=15,
-        time_limit=float('inf'),
+    """DrStrategy original 15x15 complex maze layout using original DrStrategy function"""
+    return C_memory_maze_fixed_layout(
+        entity_layer=CMaze_15x15_LAYOUT,
+        n_targets=6,
+        time_limit=1000,
         target_color_in_image=False,
         seed=42,
-        wall_textures=wall_textures,
-        floor_textures=floor_textures,
         **kwargs,
     )
 

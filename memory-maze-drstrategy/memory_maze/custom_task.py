@@ -1,4 +1,7 @@
 from memory_maze.maze import *
+
+# Define missing constants
+DEFAULT_CONTROL_FREQ = 4.0
 from dm_control.locomotion.arenas import covering, labmaze_textures, mazes
 import os
 import matplotlib.colors as mcolors
