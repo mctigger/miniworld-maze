@@ -81,6 +81,20 @@ def memory_maze_two_rooms_3x7_fixed_layout_random_goals(**kwargs):
     )
 
 
+# Original DrStrategy complex maze layout
+CMAZE_7x7_LAYOUT = """
+*********
+*P  *G  *
+*** *** *
+*G*     *
+* *** ***
+*     *G*
+* ***   *
+* G*G   *
+*********
+"""[1:]
+
+# Simple four rooms layout (original memory-maze-drstrategy)
 FOUR_ROOMS_7x7_LAYOUT = """
 *********
 *G      *
@@ -91,6 +105,27 @@ FOUR_ROOMS_7x7_LAYOUT = """
 *G  *   *
 *       *
 *********
+"""[1:]
+
+# Original DrStrategy 15x15 complex maze layout
+CMAZE_15x15_LAYOUT = """
+*****************
+***P      *     *
+*** *  G* *   * *
+*       * *  G* *
+*   * *** ***** *
+*         *     *
+* ***   * * *** *
+*G      *   *   *
+*** *** * * *  G*
+*** *     * *   *
+*** * *   * * * *
+*     *G      * *
+* *** * * *  G* *
+*  G      *   * *
+*   *   * *** * *
+*   *  G*       *
+*****************
 """[1:]
 
 
@@ -137,6 +172,30 @@ def memory_maze_four_rooms_7x7_fixed_layout(**kwargs):
     return _memory_maze_fixed_layout(
         entity_layer=FOUR_ROOMS_7x7_LAYOUT,
         n_targets=6,
+        time_limit=float('inf'),
+        target_color_in_image=False,
+        seed=42,
+        **kwargs,
+    )
+
+
+def memory_maze_cmaze_7x7_fixed_layout(**kwargs):
+    """DrStrategy original 7x7 complex maze layout"""
+    return _memory_maze_fixed_layout(
+        entity_layer=CMAZE_7x7_LAYOUT,
+        n_targets=6,
+        time_limit=float('inf'),
+        target_color_in_image=False,
+        seed=42,
+        **kwargs,
+    )
+
+
+def memory_maze_cmaze_15x15_fixed_layout(**kwargs):
+    """DrStrategy original 15x15 complex maze layout"""
+    return _memory_maze_fixed_layout(
+        entity_layer=CMAZE_15x15_LAYOUT,
+        n_targets=15,
         time_limit=float('inf'),
         target_color_in_image=False,
         seed=42,

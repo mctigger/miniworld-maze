@@ -6,7 +6,7 @@ using the modern Gymnasium API. It supports various maze layouts for testing
 agent memory and navigation capabilities.
 """
 
-from .envs import MemoryMaze, make_env, make
+from .envs import MemoryMaze, Enhanced3DMemoryMaze, make_env, make
 from .maze_layouts import get_layout, list_layouts, validate_layout, LAYOUTS
 
 # Package metadata
@@ -41,6 +41,7 @@ for env_id, task, layout_name in _ENV_CONFIGS:
 # Make key components available at package level
 __all__ = [
     'MemoryMaze',
+    'Enhanced3DMemoryMaze',
     'make_env', 
     'make',
     'get_layout',

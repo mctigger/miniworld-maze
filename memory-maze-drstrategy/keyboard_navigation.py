@@ -45,19 +45,23 @@ def get_keymap():
 def find_7x7_env():
     """Find a suitable 7x7 Memory Maze environment."""
     import gymnasium as gym
+    import memory_maze  # This triggers environment registration
     
-    # Try different 7x7 variants in order of preference
+    # Try different 7x7 variants in order of preference (DrStrategy maze first)
     preferred_envs = [
-        "MemoryMaze-four-rooms-7x7-fixed-layout-v0",
+        "MemoryMaze-cmaze-7x7-fixed-layout-v0",  # DrStrategy original complex maze
+        "MemoryMaze-four-rooms-7x7-fixed-layout-v0",  # Simple four rooms
         "MemoryMaze-four-rooms-7x7-fixed-layout-Top-v0",
         "MemoryMaze-four-rooms-7x7-fixed-layout-random-goals-v0",
     ]
     
     for env_id in preferred_envs:
         try:
-            gym.make(env_id)
+            test_env = gym.make(env_id)
+            test_env.close()
             return env_id
-        except gym.error.UnregisteredEnv:
+        except Exception as e:
+            print(f"Failed to create {env_id}: {e}")
             continue
     
     # Fallback to any 7x7 environment
@@ -131,8 +135,13 @@ def run_navigation(env_id: str, render_size: tuple, fps: int, backend: str, came
     
     # Use flexible environment with custom resolution if specified
     if camera_resolution:
-        if env_id == "MemoryMaze-four-rooms-7x7-fixed-layout-v0":
-            env_id = "MemoryMaze-four-rooms-7x7-fixed-layout-flexible-v0"
+        flexible_env_mapping = {
+            "MemoryMaze-four-rooms-7x7-fixed-layout-v0": "MemoryMaze-four-rooms-7x7-fixed-layout-flexible-v0",
+            "MemoryMaze-cmaze-7x7-fixed-layout-v0": "MemoryMaze-cmaze-7x7-fixed-layout-flexible-v0",
+            "MemoryMaze-cmaze-15x15-fixed-layout-v0": "MemoryMaze-cmaze-15x15-fixed-layout-flexible-v0",
+        }
+        if env_id in flexible_env_mapping:
+            env_id = flexible_env_mapping[env_id]
             print(f"Using flexible environment with camera resolution: {camera_resolution}")
             env = gym.make(env_id, camera_resolution=camera_resolution)
         else:

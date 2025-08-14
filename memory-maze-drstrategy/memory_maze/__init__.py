@@ -153,6 +153,40 @@ try:
             'image_only_obs': True,
         },
     )
+    
+    # Register DrStrategy original complex maze environments
+    register(
+        id='MemoryMaze-cmaze-7x7-fixed-layout-v0',
+        entry_point=f(
+            _make_gym_env,
+            tasks.memory_maze_cmaze_7x7_fixed_layout,
+            image_only_obs=True,
+        ),
+    )
+    register(
+        id='MemoryMaze-cmaze-7x7-fixed-layout-flexible-v0',
+        entry_point=FlexibleMemoryMazeEnv,
+        kwargs={
+            'dm_task_fn': tasks.memory_maze_cmaze_7x7_fixed_layout,
+            'image_only_obs': True,
+        },
+    )
+    register(
+        id='MemoryMaze-cmaze-15x15-fixed-layout-v0',
+        entry_point=f(
+            _make_gym_env,
+            tasks.memory_maze_cmaze_15x15_fixed_layout,
+            image_only_obs=True,
+        ),
+    )
+    register(
+        id='MemoryMaze-cmaze-15x15-fixed-layout-flexible-v0',
+        entry_point=FlexibleMemoryMazeEnv,
+        kwargs={
+            'dm_task_fn': tasks.memory_maze_cmaze_15x15_fixed_layout,
+            'image_only_obs': True,
+        },
+    )
     register(
         id=f'MemoryMaze-four-rooms-7x7-fixed-layout-random-goals-v0',
         entry_point=f(
