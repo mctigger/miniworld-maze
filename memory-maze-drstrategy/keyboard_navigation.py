@@ -250,7 +250,11 @@ def run_navigation(env_id: str, render_size: tuple, fps: int, backend: str, came
             keys_down = defaultdict(bool)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    # In headless mode (OSMesa), ignore spurious QUIT events
+                    if backend == "osmesa":
+                        print(f"Ignoring QUIT event in headless mode at step {steps}")
+                    else:
+                        running = False
                 if event.type == pygame.KEYDOWN:
                     keys_down[event.key] = True
             
