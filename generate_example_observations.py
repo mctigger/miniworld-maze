@@ -162,6 +162,11 @@ def generate_example_observations():
     for i, (pos, description) in enumerate(test_positions):
         print(f"\n{i+1}. Render at {description}")
         render_obs = env.render_on_pos(pos)
+        
+        # Convert CHW to HWC for PIL
+        if len(render_obs.shape) == 3 and render_obs.shape[0] == 3:
+            render_obs = np.transpose(render_obs, (1, 2, 0))
+            
         Image.fromarray(render_obs).save(f'example_render_on_pos_{i+1}.png')
         print(f"   ✓ Saved: example_render_on_pos_{i+1}.png")
         print(f"   ✓ Position: {pos}")
