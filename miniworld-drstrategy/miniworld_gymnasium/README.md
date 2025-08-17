@@ -1,1 +1,0 @@
-# Adapted from [MiniWorld](https://github.com/Farama-Foundation/Miniworld)

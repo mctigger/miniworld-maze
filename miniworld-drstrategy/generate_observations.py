@@ -11,7 +11,7 @@ from PIL import Image
 import os
 
 from nine_rooms_factory import create_nine_rooms_env
-from miniworld_gymnasium.opengl import FrameBuffer
+from src.miniworld_drstrategy.core.miniworld_gymnasium.opengl import FrameBuffer
 
 def generate_observations(variant, output_dir=None, high_res_full_views=False):
     """Generate comprehensive observations for the specified environment variant."""
