@@ -5,7 +5,7 @@ from gymnasium import spaces
 import sys
 import cv2
 
-sys.path.insert(0, '/home/tim/Projects/drstrategy_memory-maze_differences/nine_rooms_pure_gymnasium_env')
+sys.path.insert(0, '/home/tim/Projects/drstrategy_memory-maze_differences/miniworld-drstrategy')
 from miniworld_gymnasium.envs.roomnav import NineRooms
 
 class ImageToPyTorch(gym.ObservationWrapper):

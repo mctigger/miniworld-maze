@@ -9,8 +9,10 @@ from PIL import Image
 
 # Add path for our pure gymnasium implementation
 sys.path.insert(0, '/home/tim/Projects/drstrategy_memory-maze_differences')
+sys.path.insert(0, '/home/tim/Projects/drstrategy_memory-maze_differences/miniworld-drstrategy')
 
 from nine_rooms_fully_pure_gymnasium import NineRoomsFullyPureGymnasium
+from miniworld_gymnasium.opengl import FrameBuffer
 
 def generate_example_observations():
     """Generate comprehensive example observations."""
@@ -45,27 +47,31 @@ def generate_example_observations():
     print("FULL ENVIRONMENT OBSERVATIONS (All 9 Rooms)")
     print(f"{'='*50}")
     
+    # Create high-resolution frame buffer for full environment views (512x512)
+    high_res_fb = FrameBuffer(512, 512, 8)
+    print("Created 512x512 high-resolution frame buffer for environment layout logging")
+    
     # 1. Full view with agent at starting position
-    print("\n1. Full environment view with agent at start position")
-    full_view_start = base_env.render_top_view(POMDP=False)
+    print("\n1. Full environment view with agent at start position (512x512)")
+    full_view_start = base_env.render_top_view(frame_buffer=high_res_fb, POMDP=False)
     Image.fromarray(full_view_start).save('example_full_view_start.png')
     print(f"   ✓ Saved: example_full_view_start.png")
     print(f"   ✓ Agent position: {base_env.agent.pos}")
     print(f"   ✓ Image size: {full_view_start.shape}")
     
     # 2. Full view without agent (clean maze view)
-    print("\n2. Full environment view without agent (clean maze)")
-    full_view_clean = base_env.render_top_view(POMDP=False, render_ag=False)
+    print("\n2. Full environment view without agent (clean maze) (512x512)")
+    full_view_clean = base_env.render_top_view(frame_buffer=high_res_fb, POMDP=False, render_ag=False)
     Image.fromarray(full_view_clean).save('example_full_view_clean.png')
     print(f"   ✓ Saved: example_full_view_clean.png")
     print(f"   ✓ Shows: Complete 9-room layout with obstacles")
     
     # 3. Full view with agent in center
-    print("\n3. Full environment view with agent in center")
+    print("\n3. Full environment view with agent in center (512x512)")
     center_x = (base_env.min_x + base_env.max_x) / 2
     center_z = (base_env.min_z + base_env.max_z) / 2
     base_env.place_agent(pos=[center_x, 0.0, center_z])
-    full_view_center = base_env.render_top_view(POMDP=False)
+    full_view_center = base_env.render_top_view(frame_buffer=high_res_fb, POMDP=False)
     Image.fromarray(full_view_center).save('example_full_view_center.png')
     print(f"   ✓ Saved: example_full_view_center.png")
     print(f"   ✓ Agent moved to center: [{center_x:.1f}, 0.0, {center_z:.1f}]")
@@ -177,7 +183,7 @@ def generate_example_observations():
     print("SUMMARY - GENERATED EXAMPLE OBSERVATIONS")
     print(f"{'='*70}")
     
-    print(f"\n📸 FULL ENVIRONMENT VIEWS (3 images):")
+    print(f"\n📸 FULL ENVIRONMENT VIEWS (3 images - 512x512 high-resolution):")
     print(f"   • example_full_view_start.png - Complete 9-room view with agent at start")
     print(f"   • example_full_view_clean.png - Clean maze layout without agent")
     print(f"   • example_full_view_center.png - Complete view with agent in center")
@@ -203,6 +209,8 @@ def generate_example_observations():
     print(f"\n🎉 Total: 15 example observations generated!")
     print(f"📦 All images demonstrate the pure Gymnasium Nine Rooms environment")
     print(f"✨ Zero dependency on old gym package - fully modern implementation!")
+    
+    # Note: FrameBuffer cleanup is handled automatically by OpenGL context
 
 if __name__ == "__main__":
     generate_example_observations()

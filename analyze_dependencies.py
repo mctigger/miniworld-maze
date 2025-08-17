@@ -34,7 +34,7 @@ def analyze_imports(file_path):
 
 def trace_dependencies():
     """Trace dependencies from our main implementation."""
-    miniworld_path = "/home/tim/Projects/drstrategy_memory-maze_differences/nine_rooms_pure_gymnasium_env/miniworld_gymnasium"
+    miniworld_path = "/home/tim/Projects/drstrategy_memory-maze_differences/miniworld-drstrategy/miniworld_gymnasium"
     
     # Start with core files we know we need
     needed_files = set()
