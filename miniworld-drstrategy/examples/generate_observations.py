@@ -123,34 +123,47 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
     # Define test positions based on variant
     if variant == "NineRooms":
         test_positions = [
-            [7.5, 0.0, 7.5],   # top-middle room center
-            [37.5, 0.0, 37.5], # bottom-right room center
-            [22.5, 0.0, 22.5], # environment center
-            [7.5, 0.0, 22.5],  # middle-left room center
+            ([7.5, 0.0, 7.5], "top_middle_room"),     # top-middle room center
+            ([37.5, 0.0, 37.5], "bottom_right_room"), # bottom-right room center
+            ([22.5, 0.0, 22.5], "environment_center"), # environment center
+            ([7.5, 0.0, 22.5], "middle_left_room"),   # middle-left room center
         ]
     elif variant == "SpiralNineRooms":
         test_positions = [
-            [7.5, 0.0, 7.5],   # top-left room (spiral start)
-            [37.5, 0.0, 37.5], # bottom-right room (spiral end)
-            [22.5, 0.0, 7.5],  # top-right room
-            [7.5, 0.0, 37.5],  # bottom-left room
+            ([7.5, 0.0, 7.5], "spiral_start"),       # top-left room (spiral start)
+            ([37.5, 0.0, 37.5], "spiral_end"),       # bottom-right room (spiral end)
+            ([22.5, 0.0, 7.5], "top_right_room"),    # top-right room
+            ([7.5, 0.0, 37.5], "bottom_left_room"),  # bottom-left room
         ]
     else:  # TwentyFiveRooms
         test_positions = [
-            [37.5, 0.0, 37.5],   # room (1,1) - near corner
-            [112.5, 0.0, 112.5], # room (4,4) - far corner
-            [75.0, 0.0, 75.0],   # center room (2,2)
-            [37.5, 0.0, 112.5],  # room (1,4) - opposite corner
+            ([37.5, 0.0, 37.5], "near_corner"),      # room (1,1) - near corner
+            ([112.5, 0.0, 112.5], "far_corner"),     # room (4,4) - far corner
+            ([75.0, 0.0, 75.0], "center_room"),      # center room (2,2)
+            ([37.5, 0.0, 112.5], "opposite_corner"), # room (1,4) - opposite corner
         ]
     
-    for i, pos in enumerate(test_positions):
+    for i, (pos, pos_name) in enumerate(test_positions):
+        # First-person view from agent's perspective
         render_obs = env.render_on_pos(pos)
         
         # Convert CHW to HWC for PIL
         if len(render_obs.shape) == 3 and render_obs.shape[0] == 3:
             render_obs = np.transpose(render_obs, (1, 2, 0))
             
-        Image.fromarray(render_obs).save(f'{output_dir}/render_on_pos_{i+1}.png')
+        Image.fromarray(render_obs).save(f'{output_dir}/render_on_pos_{i+1}_{pos_name}_firstperson.png')
+        
+        # Also generate top-down view for comparison
+        # Store original position and move agent
+        original_pos = base_env.agent.pos.copy()
+        base_env.place_agent(pos=pos)
+        
+        # Get top-down POMDP view
+        topdown_obs = base_env.render_top_view(POMDP=True, render_ag=False)
+        Image.fromarray(topdown_obs).save(f'{output_dir}/render_on_pos_{i+1}_{pos_name}_topdown.png')
+        
+        # Restore original position
+        base_env.place_agent(pos=original_pos)
     
     env.close()
     return output_dir

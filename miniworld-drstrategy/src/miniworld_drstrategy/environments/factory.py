@@ -84,18 +84,8 @@ class NineRoomsEnvironmentWrapper:
         # Move agent to target position
         base_env.place_agent(pos=pos)
         
-        # Get observation through the base environment (HWC format)
-        if base_env.obs_level == 1:
-            if base_env.agent_mode == 'empty':
-                obs = base_env.render_top_view(POMDP=True, render_ag=False)
-            else:
-                obs = base_env.render_top_view(POMDP=True)
-        elif base_env.obs_level == 2:
-            obs = base_env.render_top_view(POMDP=False)
-        elif base_env.obs_level == 3:
-            obs = base_env.render_obs()
-        else:
-            obs = base_env.render_top_view(POMDP=True)
+        # Get first-person observation from the agent's perspective at this position
+        obs = base_env.render_obs()
         
         # Restore original position
         base_env.place_agent(pos=original_pos)
