@@ -2,7 +2,7 @@
 
 import numpy as np
 import cv2
-from ..wrappers.image_transforms import ImageToPyTorch, ResizeObservationGymnasium
+from ..wrappers.image_transforms import ImageToPyTorch
 from .nine_rooms import NineRooms
 from .spiral_nine_rooms import SpiralNineRooms
 from .twenty_five_rooms import TwentyFiveRooms

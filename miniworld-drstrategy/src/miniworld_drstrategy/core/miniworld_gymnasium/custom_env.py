@@ -172,6 +172,10 @@ class CustomMiniWorldEnv(gym.Env):
 
         # List of entities contained
         self.entities = []
+        
+        # Separate lists for performance optimization
+        self.static_entities = []
+        self.dynamic_entities = []
 
         # List of rooms in the world
         self.rooms = []
@@ -574,6 +578,13 @@ class CustomMiniWorldEnv(gym.Env):
             ent.dir = dir if dir != None else self.rand.float(-math.pi, math.pi)
             ent.pos = pos
             self.entities.append(ent)
+            
+            # Add to appropriate performance list
+            if ent.is_static:
+                self.static_entities.append(ent)
+            else:
+                self.dynamic_entities.append(ent)
+                
             return ent
 
         # Keep retrying until we find a suitable position
@@ -609,6 +620,12 @@ class CustomMiniWorldEnv(gym.Env):
             break
 
         self.entities.append(ent)
+        
+        # Add to appropriate performance list
+        if ent.is_static:
+            self.static_entities.append(ent)
+        else:
+            self.dynamic_entities.append(ent)
 
         return ent
 
@@ -748,17 +765,17 @@ class CustomMiniWorldEnv(gym.Env):
         for room in self.rooms:
             room._render()
 
-        # Render the static entities
-        for ent in self.entities:
-            if ent.is_static:
-                ent.render()
+        # Render the static entities (performance optimization)
+        for ent in self.static_entities:
+            ent.render()
 
         glEndList()
 
     def _render_world(
         self,
         frame_buffer,
-        render_agent
+        render_agent,
+        view_bounds=None
     ):
         """Render the world from a given camera position into a frame buffer,
         and produce a numpy image array as output.
@@ -767,10 +784,16 @@ class CustomMiniWorldEnv(gym.Env):
         # Call the display list for the static parts of the environment
         glCallList(1)
 
-        # TODO: keep the non-static entities in a different list for efficiency?
-        # Render the non-static entities
-        for ent in self.entities:
-            if not ent.is_static and ent is not self.agent:
+        # Render dynamic entities only (performance optimization)
+        for ent in self.dynamic_entities:
+            if ent is not self.agent:
+                # Frustum culling for POMDP mode (skip entities outside view bounds)
+                if view_bounds is not None:
+                    min_x, max_x, min_z, max_z = view_bounds
+                    if (ent.pos[0] < min_x - ent.radius or ent.pos[0] > max_x + ent.radius or
+                        ent.pos[2] < min_z - ent.radius or ent.pos[2] > max_z + ent.radius):
+                        continue
+                
                 ent.render()
                 #ent.draw_bound()
 
@@ -863,7 +886,8 @@ class CustomMiniWorldEnv(gym.Env):
 
         return self._render_world(
             frame_buffer,
-            render_agent=render_ag
+            render_agent=render_ag,
+            view_bounds=(min_x, max_x, min_z, max_z) if POMDP else None
         )
 
     def render_obs(self, frame_buffer=None):

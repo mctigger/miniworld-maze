@@ -120,7 +120,8 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
                         ent=Box(
                             list(COLORS.keys())[(k+1+(i+1)*(j+1))%9],
                             transparentable=True,
-                            size=2*self.room_size/15
+                            size=2*self.room_size/15,
+                            static=True
                         ),
                         pos=[
                             _start_x + (self.room_size/3)*(k%3) + 0.16*self.room_size,

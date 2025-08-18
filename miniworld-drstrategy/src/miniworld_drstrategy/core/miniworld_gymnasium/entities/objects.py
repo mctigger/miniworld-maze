@@ -10,9 +10,10 @@ from ..opengl import drawBox
 class Box(Entity):
     """Colored box object"""
 
-    def __init__(self, color, size=0.8, transparentable=False):
+    def __init__(self, color, size=0.8, transparentable=False, static=False):
         super().__init__()
         self.trable = transparentable
+        self.static_flag = static
         if type(size) is int or type(size) is float:
             size = np.array([size, size, size])
         size = np.array(size)
@@ -49,6 +50,11 @@ class Box(Entity):
         )
 
         glPopMatrix()
+
+    @property
+    def is_static(self):
+        """Return whether this box is static (cannot move)"""
+        return self.static_flag
 
 
 class Key(MeshEnt):

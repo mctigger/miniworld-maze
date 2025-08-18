@@ -101,7 +101,7 @@ env.close()
 ```python
 # Import specific components
 from miniworld_drstrategy.environments import NineRooms, SpiralNineRooms
-from miniworld_drstrategy.wrappers import ImageToPyTorch, ResizeObservationGymnasium
+from miniworld_drstrategy.wrappers import ImageToPyTorch
 from miniworld_drstrategy.tools import generate_observations
 
 # Create environment directly
