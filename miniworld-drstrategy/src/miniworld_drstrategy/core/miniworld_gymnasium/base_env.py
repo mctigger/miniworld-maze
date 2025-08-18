@@ -12,7 +12,7 @@ from ctypes import POINTER
 from .random import RandGen
 from .opengl import *
 from .objmesh import *
-from .entity import *
+from .entities import *
 from .math import *
 from .params import DEFAULT_PARAMS
 from .room import Room

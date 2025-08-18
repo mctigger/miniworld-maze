@@ -90,9 +90,9 @@ class NineRoomsEnvironmentWrapper:
         base_env.place_agent(pos=original_pos)
         
         # Apply wrapper transformations manually for consistency
-        # First resize
-        if hasattr(self._env, 'size'):
-            obs = cv2.resize(obs, self._env.size, interpolation=cv2.INTER_AREA)
+        # First resize to match the observation space
+        target_size = self.observation_space.shape[1:3]  # Get (H, W) from (C, H, W)
+        obs = cv2.resize(obs, (target_size[1], target_size[0]), interpolation=cv2.INTER_AREA)
         
         # Then convert to PyTorch format (CHW)
         obs = np.transpose(obs, (2, 0, 1))
