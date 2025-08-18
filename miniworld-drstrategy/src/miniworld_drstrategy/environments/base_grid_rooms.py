@@ -9,80 +9,39 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
     Base class for grid-based room environments.
     
     Supports different grid sizes and connection patterns.
+    Subclasses pass their specific configurations directly to __init__.
     """
-    
-    # Default configurations for different variants
-    VARIANT_CONFIGS = {
-        'nine_rooms': {
-            'grid_size': 3,
-            'connections': [(0,1), (0,3), (1,2), (1,4), (2,5), (3,4), (3,6), (4,5), (4,7), (5,8), (6,7), (7,8)],
-            'textures': ['beige','lightbeige', 'lightgray',
-                        'copperred', 'skyblue', 'lightcobaltgreen',
-                        'oakbrown', 'navyblue', 'cobaltgreen']
-        },
-        'spiral_nine_rooms': {
-            'grid_size': 3,
-            'connections': [(0,1), (0,3), (1,2), (2,5), (3,6), (4,5), (6,7), (7,8)],
-            'textures': ['beige','lightbeige', 'lightgray',
-                        'copperred', 'skyblue', 'lightcobaltgreen',
-                        'oakbrown', 'navyblue', 'cobaltgreen']
-        },
-        'twenty_five_rooms': {
-            'grid_size': 5,
-            'connections': [(0,1), (0,5), (1,2), (1,6), (2,3), (2,7), (3,4), (3,8), (4,9),
-                           (5,6), (5,10), (6,7), (6,11), (7,8), (7,12), (8,9), (8,13), (9,14),
-                           (10,11), (10,15), (11,12), (11,16), (12,13), (12,17), (13,14), (13,18), (14,19),
-                           (15,16), (15,20), (16,17), (16,21), (17,18), (17,22), (18,19), (18,23), (19,24),
-                           (20,21), (21,22), (22,23), (23,24)],
-            'textures': ['crimson','beanpaste', 'cobaltgreen', 'lightnavyblue', 'skyblue', 
-                        'lightcobaltgreen','oakbrown', 'copperred', 'lightgray', 'lime',
-                        'turquoise', 'violet', 'beige', 'morningglory', 'silver',
-                        'magenta','sunnyyellow', 'blueberry', 'lightbeige', 'seablue',
-                        'lemongrass', 'orchid', 'redbean', 'orange', 'realblueberry']
-        }
-    }
 
-    def __init__(self, variant=None, grid_size=None, connections=None, textures=None, 
-                 placed_room=None, obs_level=1, continuous=False, room_size=5, door_size=2,
+    def __init__(self, grid_size, connections, textures, placed_room=None, 
+                 obs_level=1, continuous=False, room_size=5, door_size=2,
                  agent_mode=None, **kwargs):
+        """
+        Initialize a grid-based room environment.
         
-        # If variant is specified, use its default configuration
-        if variant is not None:
-            if variant not in self.VARIANT_CONFIGS:
-                raise ValueError(f"Unknown variant '{variant}'. Available variants: {list(self.VARIANT_CONFIGS.keys())}")
-            
-            config = self.VARIANT_CONFIGS[variant]
-            self.grid_size = grid_size or config['grid_size']
-            default_connections = config['connections']
-            default_textures = config['textures']
-        else:
-            # Manual configuration
-            if grid_size is None:
-                raise ValueError("Either 'variant' or 'grid_size' must be specified")
-            self.grid_size = grid_size
-            default_connections = None
-            default_textures = None
-
-        # Calculate total number of rooms
+        Args:
+            grid_size: Size of the grid (e.g., 3 for 3x3 grid)
+            connections: List of (room1, room2) tuples for connections
+            textures: List of texture names for each room
+            placed_room: Initial room index (defaults to 0)
+            obs_level: Observation level (defaults to 1)
+            continuous: Whether to use continuous actions (defaults to False)
+            room_size: Size of each room in environment units (defaults to 5)
+            door_size: Size of doors between rooms (defaults to 2)
+            agent_mode: Agent rendering mode ('triangle', 'circle', 'empty')
+            **kwargs: Additional arguments passed to parent class
+        """
+        
+        # Set grid configuration
+        self.grid_size = grid_size
         self.total_rooms = self.grid_size * self.grid_size
         
-        # Set connections
-        if connections is None:
-            if default_connections is None:
-                raise ValueError("Connections must be specified when not using a predefined variant")
-            self.connections = default_connections
-        else:
-            assert len(connections) > 0, "Connection between rooms should be more than 1"
-            self.connections = connections
+        # Validate and set connections
+        assert len(connections) > 0, "Connection between rooms should be more than 1"
+        self.connections = connections
         
-        # Set textures
-        if textures is None:
-            if default_textures is None:
-                raise ValueError("Textures must be specified when not using a predefined variant")
-            self.textures = default_textures
-        else:
-            assert len(textures) == self.total_rooms, f"Textures for floor should be same as the number of the rooms ({self.total_rooms})"
-            self.textures = textures
+        # Validate and set textures
+        assert len(textures) == self.total_rooms, f"Textures for floor should be same as the number of the rooms ({self.total_rooms})"
+        self.textures = textures
         
         # Set placed room
         if placed_room is None:

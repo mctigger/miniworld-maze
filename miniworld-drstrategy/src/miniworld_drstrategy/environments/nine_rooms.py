@@ -20,10 +20,16 @@ class NineRooms(GridRoomsEnvironment):
                  obs_level=1, continuous=False, room_size=5, door_size=2,
                  agent_mode=None, **kwargs):
         
+        # Default configuration for NineRooms
+        default_connections = [(0,1), (0,3), (1,2), (1,4), (2,5), (3,4), (3,6), (4,5), (4,7), (5,8), (6,7), (7,8)]
+        default_textures = ['beige','lightbeige', 'lightgray',
+                           'copperred', 'skyblue', 'lightcobaltgreen',
+                           'oakbrown', 'navyblue', 'cobaltgreen']
+        
         super().__init__(
-            variant='nine_rooms',
-            connections=connections,
-            textures=textures,
+            grid_size=3,
+            connections=connections or default_connections,
+            textures=textures or default_textures,
             placed_room=placed_room,
             obs_level=obs_level,
             continuous=continuous,

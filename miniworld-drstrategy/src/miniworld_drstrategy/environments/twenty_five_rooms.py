@@ -24,10 +24,22 @@ class TwentyFiveRooms(GridRoomsEnvironment):
                  obs_level=1, continuous=False, room_size=5, door_size=2,
                  agent_mode=None, **kwargs):
         
+        # Default configuration for TwentyFiveRooms
+        default_connections = [(0,1), (0,5), (1,2), (1,6), (2,3), (2,7), (3,4), (3,8), (4,9),
+                              (5,6), (5,10), (6,7), (6,11), (7,8), (7,12), (8,9), (8,13), (9,14),
+                              (10,11), (10,15), (11,12), (11,16), (12,13), (12,17), (13,14), (13,18), (14,19),
+                              (15,16), (15,20), (16,17), (16,21), (17,18), (17,22), (18,19), (18,23), (19,24),
+                              (20,21), (21,22), (22,23), (23,24)]
+        default_textures = ['crimson','beanpaste', 'cobaltgreen', 'lightnavyblue', 'skyblue', 
+                           'lightcobaltgreen','oakbrown', 'copperred', 'lightgray', 'lime',
+                           'turquoise', 'violet', 'beige', 'morningglory', 'silver',
+                           'magenta','sunnyyellow', 'blueberry', 'lightbeige', 'seablue',
+                           'lemongrass', 'orchid', 'redbean', 'orange', 'realblueberry']
+        
         super().__init__(
-            variant='twenty_five_rooms',
-            connections=connections,
-            textures=textures,
+            grid_size=5,
+            connections=connections or default_connections,
+            textures=textures or default_textures,
             placed_room=placed_room,
             obs_level=obs_level,
             continuous=continuous,
