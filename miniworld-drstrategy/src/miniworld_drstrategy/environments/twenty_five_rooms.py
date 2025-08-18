@@ -22,7 +22,7 @@ class TwentyFiveRooms(GridRoomsEnvironment):
 
     def __init__(self, connections=None, textures=None, placed_room=None, 
                  obs_level=1, continuous=False, room_size=5, door_size=2,
-                 agent_mode=None, **kwargs):
+                 agent_mode=None, obs_width=80, obs_height=80, **kwargs):
         
         # Default configuration for TwentyFiveRooms
         default_connections = [(0,1), (0,5), (1,2), (1,6), (2,3), (2,7), (3,4), (3,8), (4,9),
@@ -46,5 +46,7 @@ class TwentyFiveRooms(GridRoomsEnvironment):
             room_size=room_size,
             door_size=door_size,
             agent_mode=agent_mode,
+            obs_width=obs_width,
+            obs_height=obs_height,
             **kwargs
         )

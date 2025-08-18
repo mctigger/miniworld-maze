@@ -18,7 +18,7 @@ class SpiralNineRooms(GridRoomsEnvironment):
 
     def __init__(self, connections=None, textures=None, placed_room=None, 
                  obs_level=1, continuous=False, room_size=5, door_size=2,
-                 agent_mode=None, **kwargs):
+                 agent_mode=None, obs_width=80, obs_height=80, **kwargs):
         
         # Default configuration for SpiralNineRooms
         default_connections = [(0,1), (0,3), (1,2), (2,5), (3,6), (4,5), (6,7), (7,8)]
@@ -36,5 +36,7 @@ class SpiralNineRooms(GridRoomsEnvironment):
             room_size=room_size,
             door_size=door_size,
             agent_mode=agent_mode,
+            obs_width=obs_width,
+            obs_height=obs_height,
             **kwargs
         )

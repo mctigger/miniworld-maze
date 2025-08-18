@@ -19,7 +19,7 @@ class NineRoomsEnvironmentWrapper:
             variant: Environment variant ("NineRooms", "SpiralNineRooms", "TwentyFiveRooms")
             obs_level: Observation level (1 for RGB)
             continuous: Whether to use continuous actions
-            size: Observation image size (will be resized to size x size)
+            size: Observation image size (rendered directly at this size to avoid resizing)
             room_size: Size of each room in environment units
             door_size: Size of doors between rooms
         """
@@ -37,17 +37,18 @@ class NineRoomsEnvironmentWrapper:
         
         env_class = env_classes[variant]
         
-        # Create base environment
+        # Create base environment with direct rendering size
         base_env = env_class(
             room_size=room_size,
             door_size=door_size,
             obs_level=obs_level,
-            continuous=continuous
+            continuous=continuous,
+            obs_width=size,
+            obs_height=size
         )
         
-        # Apply wrappers
-        env = ResizeObservationGymnasium(base_env, size)
-        env = ImageToPyTorch(env)
+        # Apply wrappers - no resize needed since we render at target size
+        env = ImageToPyTorch(base_env)
         
         self._env = env
         self.action_space = env.action_space
@@ -83,18 +84,24 @@ class NineRoomsEnvironmentWrapper:
         # Move agent to target position
         base_env.place_agent(pos=pos)
         
-        # Get observation through the wrapper chain
-        obs = self._env.render()
+        # Get observation through the base environment (HWC format)
+        if base_env.obs_level == 1:
+            if base_env.agent_mode == 'empty':
+                obs = base_env.render_top_view(POMDP=True, render_ag=False)
+            else:
+                obs = base_env.render_top_view(POMDP=True)
+        elif base_env.obs_level == 2:
+            obs = base_env.render_top_view(POMDP=False)
+        elif base_env.obs_level == 3:
+            obs = base_env.render_obs()
+        else:
+            obs = base_env.render_top_view(POMDP=True)
         
         # Restore original position
         base_env.place_agent(pos=original_pos)
         
         # Apply wrapper transformations manually for consistency
-        # First resize to match the observation space
-        target_size = self.observation_space.shape[1:3]  # Get (H, W) from (C, H, W)
-        obs = cv2.resize(obs, (target_size[1], target_size[0]), interpolation=cv2.INTER_AREA)
-        
-        # Then convert to PyTorch format (CHW)
+        # Convert to PyTorch format (CHW) - no resize needed since we render at target size
         obs = np.transpose(obs, (2, 0, 1))
         
         return obs

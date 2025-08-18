@@ -14,7 +14,7 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
 
     def __init__(self, grid_size, connections, textures, placed_room=None, 
                  obs_level=1, continuous=False, room_size=5, door_size=2,
-                 agent_mode=None, **kwargs):
+                 agent_mode=None, obs_width=80, obs_height=80, **kwargs):
         """
         Initialize a grid-based room environment.
         
@@ -28,6 +28,8 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
             room_size: Size of each room in environment units (defaults to 5)
             door_size: Size of doors between rooms (defaults to 2)
             agent_mode: Agent rendering mode ('triangle', 'circle', 'empty')
+            obs_width: Observation width in pixels (defaults to 80)
+            obs_height: Observation height in pixels (defaults to 80)
             **kwargs: Additional arguments passed to parent class
         """
         
@@ -65,6 +67,8 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
             max_episode_steps=1000,
             continuous=continuous,
             agent_mode=self.agent_mode,
+            obs_width=obs_width,
+            obs_height=obs_height,
             **kwargs
         )
 
