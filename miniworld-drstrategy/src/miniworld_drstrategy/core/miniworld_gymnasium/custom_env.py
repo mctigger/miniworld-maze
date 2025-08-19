@@ -222,24 +222,26 @@ class CustomMiniWorldEnv(gym.Env):
         # Pre-compile static parts of the environment into a display list
         self._render_static()
 
+        # Import ObservationLevel here to avoid circular imports
+        from ..observation_types import ObservationLevel
+        
         # Generate the first camera image
         obs = None
-        if self.obs_level == 1:
+        if self.obs_level == ObservationLevel.TOP_DOWN_PARTIAL:
             if self.agent_mode == 'empty':
                 obs = self.render_top_view(POMDP=True, render_ag=False)
             else:
                 obs = self.render_top_view(POMDP=True)
 
-        elif self.obs_level == 2:
+        elif self.obs_level == ObservationLevel.TOP_DOWN_FULL:
             obs = self.render_top_view(POMDP=False)
 
-        elif self.obs_level == 3:
+        elif self.obs_level == ObservationLevel.FIRST_PERSON:
             obs = self.render_obs()
 
         else:
-            assert ((self.obs_level < 1) or (self.obs_level > 3)), "obs_level should be between 1 and 3"
-            import sys
-            sys.exit(0)
+            valid_levels = list(ObservationLevel)
+            raise ValueError(f"Invalid obs_level {self.obs_level}. Must be one of {valid_levels}")
 
         # Return first observation with info dict for Gymnasium compatibility
         return obs, {}
@@ -390,9 +392,12 @@ class CustomMiniWorldEnv(gym.Env):
                 self.agent.carrying.dir = self.agent.dir
 
         # Generate the current camera image
+        # Import ObservationLevel here to avoid circular imports
+        from ..observation_types import ObservationLevel
+        
         obs = None
         topdown = None
-        if self.obs_level == 1:
+        if self.obs_level == ObservationLevel.TOP_DOWN_PARTIAL:
             if self.agent_mode == 'empty':
                 obs = self.render_top_view(POMDP=True, render_ag=False)
             else:
@@ -400,18 +405,16 @@ class CustomMiniWorldEnv(gym.Env):
                 
             topdown = self.render_top_view(POMDP=False, frame_buffer=self.topdown_fb)
 
-
-        elif self.obs_level == 2:
+        elif self.obs_level == ObservationLevel.TOP_DOWN_FULL:
             obs = self.render_top_view(POMDP=False)
 
-        elif self.obs_level == 3:
+        elif self.obs_level == ObservationLevel.FIRST_PERSON:
             obs = self.render_obs()
             topdown = self.render_top_view(POMDP=False, frame_buffer=self.topdown_fb)
 
         else:
-            assert ((self.obs_level < 1) or (self.obs_level > 3)), "obs_level should be between 1 and 3"
-            import sys
-            sys.exit(0)
+            valid_levels = list(ObservationLevel)
+            raise ValueError(f"Invalid obs_level {self.obs_level}. Must be one of {valid_levels}")
 
         # If the maximum time step count is reached
         if self.step_count >= self.max_episode_steps:
@@ -1056,7 +1059,10 @@ class CustomMiniWorldEnv(gym.Env):
         if view == 'agent':
             img = self.render_obs(self.vis_fb)
         else:
-            if self.obs_level == 1:
+            # Import ObservationLevel here to avoid circular imports
+            from ...observation_types import ObservationLevel
+            
+            if self.obs_level == ObservationLevel.TOP_DOWN_PARTIAL:
                 img = self.render_top_view(self.vis_fb, POMDP=True)
             else:
                 img = self.render_top_view(self.vis_fb, POMDP=False)

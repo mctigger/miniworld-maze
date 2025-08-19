@@ -19,6 +19,7 @@ from .environments.factory import create_nine_rooms_env, NineRoomsEnvironmentWra
 from .environments.nine_rooms import NineRooms
 from .environments.spiral_nine_rooms import SpiralNineRooms
 from .environments.twenty_five_rooms import TwentyFiveRooms
+from .core import ObservationLevel
 
 __version__ = "1.0.0"
 __all__ = [
@@ -26,5 +27,6 @@ __all__ = [
     "NineRoomsEnvironmentWrapper", 
     "NineRooms",
     "SpiralNineRooms", 
-    "TwentyFiveRooms"
+    "TwentyFiveRooms",
+    "ObservationLevel"
 ]

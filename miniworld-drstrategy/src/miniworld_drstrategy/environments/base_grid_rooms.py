@@ -1,7 +1,7 @@
 """Base Grid Rooms environment implementation."""
 
 from gymnasium import spaces
-from ..core import CustomMiniWorldEnv, Box, COLORS
+from ..core import CustomMiniWorldEnv, Box, COLORS, ObservationLevel
 
 
 class GridRoomsEnvironment(CustomMiniWorldEnv):
@@ -13,7 +13,7 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
     """
 
     def __init__(self, grid_size, connections, textures, placed_room=None, 
-                 obs_level=1, continuous=False, room_size=5, door_size=2,
+                 obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, room_size=5, door_size=2,
                  agent_mode=None, obs_width=80, obs_height=80, **kwargs):
         """
         Initialize a grid-based room environment.

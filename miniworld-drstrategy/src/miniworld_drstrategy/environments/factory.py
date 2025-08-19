@@ -3,6 +3,7 @@
 import numpy as np
 import cv2
 from ..wrappers.image_transforms import ImageToPyTorch
+from ..core import ObservationLevel
 from .nine_rooms import NineRooms
 from .spiral_nine_rooms import SpiralNineRooms
 from .twenty_five_rooms import TwentyFiveRooms
@@ -11,13 +12,13 @@ from .twenty_five_rooms import TwentyFiveRooms
 class NineRoomsEnvironmentWrapper:
     """Unified wrapper for all Nine Rooms environment variants."""
     
-    def __init__(self, variant="NineRooms", obs_level=1, continuous=False, size=64, room_size=15, door_size=2.5):
+    def __init__(self, variant="NineRooms", obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, size=64, room_size=15, door_size=2.5):
         """
         Create a Nine Rooms environment variant.
         
         Args:
             variant: Environment variant ("NineRooms", "SpiralNineRooms", "TwentyFiveRooms")
-            obs_level: Observation level (1 for RGB)
+            obs_level: Observation level (ObservationLevel enum)
             continuous: Whether to use continuous actions
             size: Observation image size (rendered directly at this size to avoid resizing)
             room_size: Size of each room in environment units
@@ -112,6 +113,6 @@ def create_nine_rooms_env(variant="NineRooms", **kwargs):
 
 
 # For backward compatibility
-def NineRoomsFullyPureGymnasium(name="NineRooms", obs_level=1, continuous=False, size=64):
+def NineRoomsFullyPureGymnasium(name="NineRooms", obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, size=64):
     """Legacy function for backward compatibility."""
     return create_nine_rooms_env(variant="NineRooms", obs_level=obs_level, continuous=continuous, size=size)

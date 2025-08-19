@@ -1,6 +1,7 @@
 """NineRooms environment implementation."""
 
 from .base_grid_rooms import GridRoomsEnvironment
+from ..core import ObservationLevel
 
 
 class NineRooms(GridRoomsEnvironment):
@@ -17,7 +18,7 @@ class NineRooms(GridRoomsEnvironment):
     """
 
     def __init__(self, connections=None, textures=None, placed_room=None, 
-                 obs_level=1, continuous=False, room_size=5, door_size=2,
+                 obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, room_size=5, door_size=2,
                  agent_mode=None, obs_width=80, obs_height=80, **kwargs):
         
         # Default configuration for NineRooms

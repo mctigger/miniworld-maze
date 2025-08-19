@@ -191,7 +191,7 @@ def main():
     parser.add_argument('--sizes', nargs='+', type=int, 
                         default=[32, 48, 64, 96, 128, 192, 256],
                         help='Observation sizes to test')
-    parser.add_argument('--steps', type=int, default=100,
+    parser.add_argument('--steps', type=int, default=1000,
                         help='Number of steps per benchmark')
     parser.add_argument('--all-variants', action='store_true',
                         help='Benchmark all environment variants')
