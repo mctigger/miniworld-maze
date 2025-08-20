@@ -4,48 +4,38 @@ This directory contains example scripts demonstrating the usage and performance 
 
 ## Scripts
 
-### live_control_sequence.py ⭐ **RECOMMENDED**
+### live_control_opencv.py ⭐ **RECOMMENDED**
 
-Interactive keyboard control that generates image sequences. Perfect for exploring environments step-by-step.
+Real-time dual-view OpenCV live control with ego view and top-down map side by side.
 
 **Usage:**
 ```bash
-# Start interactive session with first-person view
-python examples/live_control_sequence.py --variant NineRooms --size 128
+# Dual-view window with first-person ego view + top-down map
+python examples/live_control_opencv.py --variant NineRooms --size 128
 
-# Use top-down view for better spatial understanding
-python examples/live_control_sequence.py --variant NineRooms --size 128 --obs-level TOP_DOWN_PARTIAL
+# Use top-down partial view as ego view + full map  
+python examples/live_control_opencv.py --variant NineRooms --size 128 --obs-level TOP_DOWN_PARTIAL
 
-# Custom output directory
-python examples/live_control_sequence.py --variant TwentyFiveRooms --output-dir my_exploration
+# Different environment variants
+python examples/live_control_opencv.py --variant TwentyFiveRooms --size 128
 ```
 
 **Controls:**
-- `w/a/s/d` - Move forward/turn left/move backward/turn right
-- `space` - Pick up object, `x` - Drop object, `e` - Toggle/activate
-- `r` - Reset environment, `1/2/3` - Switch environment variants
-- `q` - Quit
-
-**Features:**
-- Each action generates a PNG image with overlay information
-- Works in any environment (headless or with display)
-- No OpenGL conflicts - completely reliable
-- Perfect for step-by-step environment exploration
-
-### live_control_opencv.py
-
-Real-time OpenCV-based live control with immediate visual feedback.
-
-**Usage:**
-```bash
-# Real-time window with keyboard control
-python examples/live_control_opencv.py --variant NineRooms --size 128
-```
+- `W/A/S/D` - Move forward/turn left/move backward/turn right
+- `SPACE` - Pick up object, `X` - Drop object, `E` - Toggle/activate
+- `R` - Reset environment, `1/2/3` - Switch environment variants
+- `ESC/Q` - Quit
 
 **Requirements:**
 - Display environment (not headless)
 - Click OpenCV window to focus for keyboard input
-- Same controls as sequence version but with immediate feedback
+
+**Features:**
+- **Dual synchronized views**: Ego view (configurable) + top-down full map
+- **Real-time agent tracking**: See your position and orientation on the map
+- **Perfect synchronization**: Both environments step together automatically
+- **No OpenGL conflicts**: Reliable operation using OpenCV
+- **Multiple view combinations**: First-person + map, top-down + map, etc.
 
 ### generate_observations.py
 
@@ -109,10 +99,11 @@ python examples/observation_level_demo.py
 ## Key Benefits Demonstrated
 
 ### Interactive Control
-- **Real-time Exploration**: Navigate environments with keyboard controls
-- **Multiple View Modes**: Switch between first-person and top-down perspectives
-- **No OpenGL Conflicts**: Reliable operation in any environment
-- **Image Sequence Generation**: Perfect for analysis and documentation
+- **Dual-View Navigation**: Ego view + top-down map displayed simultaneously
+- **Real-time Agent Tracking**: Always see your position and orientation on the map
+- **Synchronized Environments**: Both views update together for perfect consistency
+- **No OpenGL Conflicts**: Reliable operation using OpenCV for display
+- **Multiple View Combinations**: First-person + map, top-down + map, etc.
 
 ### Direct Rendering Performance
 - **No Resize Overhead**: Environments render directly at requested size
@@ -127,9 +118,8 @@ python examples/observation_level_demo.py
 
 ## Usage Tips
 
-1. **For Interactive Exploration**: Use `live_control_sequence.py` to navigate and explore
-2. **For Real-time Control**: Use `live_control_opencv.py` if you have a display
-3. **For Research**: Use higher resolutions (256x256+) for detailed analysis
-4. **For Training**: Use standard sizes (64x64, 128x128) for optimal speed
-5. **For Visualization**: Use `generate_observations.py` to create comprehensive datasets
-6. **For Optimization**: Use `benchmark_rendering.py` to find optimal settings
+1. **For Interactive Exploration**: Use `live_control_opencv.py` for real-time navigation
+2. **For Research**: Use higher resolutions (256x256+) for detailed analysis
+3. **For Training**: Use standard sizes (64x64, 128x128) for optimal speed
+4. **For Visualization**: Use `generate_observations.py` to create comprehensive datasets
+5. **For Optimization**: Use `benchmark_rendering.py` to find optimal settings

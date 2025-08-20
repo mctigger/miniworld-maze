@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-OpenCV-based live keyboard control for Nine Rooms environments.
-This avoids OpenGL conflicts by using OpenCV for display instead of pygame.
+OpenCV-based dual-view live keyboard control for Nine Rooms environments.
+Shows ego view and top-down map side by side with agent position tracking.
+Avoids OpenGL conflicts by using OpenCV for display instead of pygame.
 
 Controls:
     W/A/S/D - Move forward/turn left/move backward/turn right
@@ -11,9 +12,16 @@ Controls:
     R       - Reset environment
     ESC/Q   - Quit
     1/2/3   - Switch between environment variants
+
+Features:
+    - Dual synchronized views: ego view (configurable) + top-down map
+    - Real-time agent position tracking on the map
+    - Both environments stay perfectly synchronized
+    - No OpenGL conflicts with environment rendering
 """
 
 import argparse
+import math
 import time
 import sys
 from typing import Optional, Dict, Any
@@ -45,8 +53,10 @@ class OpenCVLiveController:
         self.size = size
         self.current_variant = variant
         self.obs_level = obs_level
-        self.env = None
+        self.env = None  # Main environment (ego view)
+        self.map_env = None  # Separate environment for top-down map
         self.current_obs = None
+        self.current_map_obs = None
         self.running = True
         
         # Available variants
@@ -72,9 +82,10 @@ class OpenCVLiveController:
         self.current_fps = 0
         
         # Display settings
-        self.display_width = 800
+        self.display_width = 1200  # Wider to accommodate both views
         self.display_height = 600
-        self.info_height = 150  # Height reserved for info text
+        self.info_height = 100  # Reduced height for info text
+        self.view_size = 400  # Size of each view panel
         
     def create_environment(self, variant: str) -> bool:
         """
@@ -87,26 +98,42 @@ class OpenCVLiveController:
             True if successful, False otherwise
         """
         try:
+            # Close existing environments
             if self.env:
                 self.env.close()
+            if self.map_env:
+                self.map_env.close()
                 
-            print(f"🔄 Creating {variant} environment...")
+            print(f"🔄 Creating {variant} environments...")
+            
+            # Create main environment (ego view)
             self.env = create_nine_rooms_env(
                 variant=variant, 
                 size=self.size,
                 obs_level=self.obs_level
             )
             
-            # Test reset to ensure environment works
-            obs, info = self.env.reset()
-            self.current_obs = obs  # Store current observation
+            # Create separate environment for top-down map
+            self.map_env = create_nine_rooms_env(
+                variant=variant, 
+                size=self.size,
+                obs_level=ObservationLevel.TOP_DOWN_FULL  # Always use full top-down for map
+            )
+            
+            # Synchronize both environments to same initial state
+            obs, info = self.env.reset(seed=42)
+            map_obs, map_info = self.map_env.reset(seed=42)
+            
+            self.current_obs = obs
+            self.current_map_obs = map_obs
             
             self.current_variant = variant
             self.step_count = 0
             self.episode_count += 1
             
-            print(f"✅ {variant} environment ready!")
-            print(f"   Observation shape: {obs.shape}")
+            print(f"✅ {variant} environments ready!")
+            print(f"   Ego view shape: {obs.shape}")
+            print(f"   Map view shape: {map_obs.shape}")
             print(f"   Action space: {self.env.action_space}")
             
             return True
@@ -115,9 +142,9 @@ class OpenCVLiveController:
             print(f"❌ Failed to create {variant} environment: {e}")
             return False
     
-    def get_observation_display(self) -> Optional[np.ndarray]:
+    def get_ego_view_display(self) -> Optional[np.ndarray]:
         """
-        Get current observation formatted for OpenCV display.
+        Get current ego observation formatted for OpenCV display.
         
         Returns:
             BGR image array for OpenCV or None if failed
@@ -131,91 +158,213 @@ class OpenCVLiveController:
                 obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
                 
                 # Resize for display
-                display_size = min(self.display_width, self.display_height - self.info_height)
-                obs_resized = cv2.resize(obs_bgr, (display_size, display_size))
+                obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
                 
                 return obs_resized
             else:
-                # Create placeholder
-                placeholder = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-                placeholder[::20, :] = [100, 100, 100]  # Grid pattern
-                placeholder[:, ::20] = [100, 100, 100]
-                
-                # Convert to BGR and resize
-                placeholder_bgr = cv2.cvtColor(placeholder, cv2.COLOR_RGB2BGR)
-                display_size = min(self.display_width, self.display_height - self.info_height)
-                placeholder_resized = cv2.resize(placeholder_bgr, (display_size, display_size))
-                
-                return placeholder_resized
+                return self._create_placeholder("No Ego View")
                 
         except Exception as e:
-            print(f"⚠️  Display conversion failed: {e}")
-            # Return error placeholder
-            error_img = np.zeros((400, 400, 3), dtype=np.uint8)
-            cv2.putText(error_img, "Display Error", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            return error_img
+            print(f"⚠️  Ego view conversion failed: {e}")
+            return self._create_placeholder("Ego View Error")
     
-    def create_info_panel(self, obs_img: np.ndarray) -> np.ndarray:
+    def get_map_view_display(self) -> Optional[np.ndarray]:
         """
-        Create info panel with controls and stats.
+        Get current map observation with agent position marker.
+        
+        Returns:
+            BGR image array for OpenCV or None if failed
+        """
+        try:
+            if self.current_map_obs is not None and self.map_env is not None:
+                # Convert from CHW to HWC
+                obs_hwc = np.transpose(self.current_map_obs, (1, 2, 0))
+                
+                # Convert RGB to BGR for OpenCV
+                obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+                
+                # Resize for display
+                obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+                
+                # Add agent position marker
+                obs_with_agent = self._add_agent_marker(obs_resized)
+                
+                return obs_with_agent
+            else:
+                return self._create_placeholder("No Map View")
+                
+        except Exception as e:
+            print(f"⚠️  Map view conversion failed: {e}")
+            return self._create_placeholder("Map View Error")
+    
+    def _add_agent_marker(self, map_image: np.ndarray) -> np.ndarray:
+        """
+        Add agent position and orientation marker to the map view.
         
         Args:
-            obs_img: Observation image
+            map_image: The top-down map image
             
         Returns:
-            Combined image with info panel
+            Map image with agent marker
         """
-        # Create info panel
-        info_panel = np.zeros((self.info_height, self.display_width, 3), dtype=np.uint8)
+        try:
+            # Get access to the base environment to read agent position
+            base_env = self.map_env
+            while hasattr(base_env, 'env') or hasattr(base_env, '_env'):
+                if hasattr(base_env, 'env'):
+                    base_env = base_env.env
+                elif hasattr(base_env, '_env'):
+                    base_env = base_env._env
+                else:
+                    break
+            
+            # Get agent position and orientation
+            if hasattr(base_env, 'agent') and base_env.agent is not None:
+                agent_pos = base_env.agent.pos
+                agent_dir = base_env.agent.dir
+                
+                # Convert world coordinates to pixel coordinates
+                # Environment bounds
+                env_min_x = base_env.min_x
+                env_max_x = base_env.max_x
+                env_min_z = base_env.min_z
+                env_max_z = base_env.max_z
+                
+                # Convert agent position to pixel coordinates
+                pixel_x = int((agent_pos[0] - env_min_x) / (env_max_x - env_min_x) * self.view_size)
+                pixel_z = int((agent_pos[2] - env_min_z) / (env_max_z - env_min_z) * self.view_size)
+                
+                # Clamp to image bounds
+                pixel_x = max(0, min(self.view_size - 1, pixel_x))
+                pixel_z = max(0, min(self.view_size - 1, pixel_z))
+                
+                # Create a copy to avoid modifying the original
+                marked_image = map_image.copy()
+                
+                # Draw agent position as a circle
+                agent_radius = max(5, self.view_size // 80)  # Scale with image size
+                cv2.circle(marked_image, (pixel_x, pixel_z), agent_radius, (0, 255, 255), -1)  # Yellow filled circle
+                cv2.circle(marked_image, (pixel_x, pixel_z), agent_radius + 2, (0, 0, 0), 2)    # Black outline
+                
+                # Draw direction indicator (small arrow/line)
+                if agent_dir is not None:
+                    # Calculate direction vector
+                    dir_length = agent_radius + 8
+                    end_x = int(pixel_x + dir_length * math.cos(agent_dir))
+                    end_z = int(pixel_z + dir_length * math.sin(agent_dir))
+                    
+                    # Draw direction line
+                    cv2.line(marked_image, (pixel_x, pixel_z), (end_x, end_z), (0, 255, 0), 3)  # Green direction line
+                    
+                    # Draw small arrowhead
+                    arrow_size = 5
+                    arrow_angle = 0.5  # radians
+                    
+                    # Calculate arrowhead points
+                    left_x = int(end_x - arrow_size * math.cos(agent_dir - arrow_angle))
+                    left_z = int(end_z - arrow_size * math.sin(agent_dir - arrow_angle))
+                    right_x = int(end_x - arrow_size * math.cos(agent_dir + arrow_angle))
+                    right_z = int(end_z - arrow_size * math.sin(agent_dir + arrow_angle))
+                    
+                    # Draw arrowhead
+                    cv2.line(marked_image, (end_x, end_z), (left_x, left_z), (0, 255, 0), 2)
+                    cv2.line(marked_image, (end_x, end_z), (right_x, right_z), (0, 255, 0), 2)
+                
+                return marked_image
+            else:
+                return map_image
+                
+        except Exception as e:
+            print(f"⚠️  Failed to add agent marker: {e}")
+            return map_image
+    
+    def _create_placeholder(self, text: str) -> np.ndarray:
+        """Create a placeholder image with text."""
+        placeholder = np.zeros((self.view_size, self.view_size, 3), dtype=np.uint8)
+        placeholder[::20, :] = [100, 100, 100]  # Grid pattern
+        placeholder[:, ::20] = [100, 100, 100]
         
-        # Add text information
+        # Add text
+        cv2.putText(placeholder, text, (self.view_size//4, self.view_size//2), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        
+        return placeholder
+    
+    def create_dual_view_display(self, ego_img: np.ndarray, map_img: np.ndarray) -> np.ndarray:
+        """
+        Create dual-view display with ego view and top-down map side by side.
+        
+        Args:
+            ego_img: Ego view image
+            map_img: Top-down map image
+            
+        Returns:
+            Combined image with both views and info panel
+        """
+        # Create main canvas
+        combined_img = np.zeros((self.display_height, self.display_width, 3), dtype=np.uint8)
+        
+        # View positions
+        ego_x = 50
+        ego_y = 50
+        map_x = ego_x + self.view_size + 50
+        map_y = 50
+        
+        # Place ego view
+        combined_img[ego_y:ego_y + self.view_size, ego_x:ego_x + self.view_size] = ego_img
+        
+        # Place map view
+        combined_img[map_y:map_y + self.view_size, map_x:map_x + self.view_size] = map_img
+        
+        # Add labels
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
-        color = (255, 255, 255)  # White text
-        thickness = 1
+        font_scale = 0.7
+        color = (255, 255, 255)
+        thickness = 2
         
-        y_pos = 25
-        line_height = 25
-        
-        # Environment info
-        cv2.putText(info_panel, f"Environment: {self.current_variant}", (10, y_pos), font, font_scale, color, thickness)
-        y_pos += line_height
-        
-        # Observation level
+        # Ego view label
         obs_level_name = self.obs_level.name if hasattr(self.obs_level, 'name') else str(self.obs_level)
-        cv2.putText(info_panel, f"View: {obs_level_name}", (10, y_pos), font, font_scale, color, thickness)
-        y_pos += line_height
+        cv2.putText(combined_img, f"Ego View ({obs_level_name})", 
+                   (ego_x, ego_y - 10), font, font_scale, color, thickness)
         
-        # Stats
-        cv2.putText(info_panel, f"Episode: {self.episode_count} | Step: {self.step_count} | FPS: {self.current_fps}", 
-                   (10, y_pos), font, font_scale, color, thickness)
-        y_pos += line_height
+        # Map view label
+        cv2.putText(combined_img, "Map View (TOP_DOWN_FULL)", 
+                   (map_x, map_y - 10), font, font_scale, color, thickness)
         
-        # Controls (smaller font)
+        # Add agent marker legend
+        legend_x = map_x + self.view_size - 180
+        legend_y = map_y + 20
+        legend_font_scale = 0.4
+        
+        # Draw sample agent marker in legend
+        cv2.circle(combined_img, (legend_x + 15, legend_y + 5), 4, (0, 255, 255), -1)  # Yellow circle
+        cv2.circle(combined_img, (legend_x + 15, legend_y + 5), 6, (0, 0, 0), 1)      # Black outline
+        cv2.line(combined_img, (legend_x + 15, legend_y + 5), (legend_x + 25, legend_y + 5), (0, 255, 0), 2)  # Green direction line
+        
+        # Legend text
+        cv2.putText(combined_img, "Agent Position & Direction", 
+                   (legend_x + 35, legend_y + 10), font, legend_font_scale, (200, 200, 200), 1)
+        
+        # Create info panel at bottom
+        info_y = self.view_size + 70
+        
+        # Environment and stats info
+        font_scale = 0.6
+        cv2.putText(combined_img, f"Environment: {self.current_variant}", 
+                   (10, info_y), font, font_scale, color, 1)
+        cv2.putText(combined_img, f"Episode: {self.episode_count} | Step: {self.step_count} | FPS: {self.current_fps}", 
+                   (10, info_y + 25), font, font_scale, color, 1)
+        
+        # Controls info
         font_scale_small = 0.5
+        controls_y = info_y + 55
         controls = [
-            "CONTROLS: W/A/S/D=Move/Turn, SPACE=Pickup, X=Drop, E=Toggle",
-            "R=Reset, 1/2/3=Switch Env, ESC/Q=Quit"
+            "CONTROLS: W/A/S/D=Move/Turn, SPACE=Pickup, X=Drop, E=Toggle, R=Reset, 1/2/3=Switch Env, ESC/Q=Quit"
         ]
         
         for i, control in enumerate(controls):
-            cv2.putText(info_panel, control, (10, y_pos + i * 20), font, font_scale_small, (200, 200, 200), thickness)
-        
-        # Resize observation to fit beside info
-        obs_height = self.display_height - self.info_height
-        obs_resized = cv2.resize(obs_img, (obs_height, obs_height))
-        
-        # Create combined image
-        combined_height = self.display_height
-        combined_width = max(obs_height, self.display_width)
-        combined_img = np.zeros((combined_height, combined_width, 3), dtype=np.uint8)
-        
-        # Place observation
-        combined_img[0:obs_height, 0:obs_height] = obs_resized
-        
-        # Place info panel below (adjust width to match combined image)
-        info_width = min(info_panel.shape[1], combined_width)
-        combined_img[obs_height:combined_height, 0:info_width] = info_panel[:, 0:info_width]
+            cv2.putText(combined_img, control, (10, controls_y + i * 20), 
+                       font, font_scale_small, (200, 200, 200), 1)
         
         return combined_img
     
@@ -234,14 +383,19 @@ class OpenCVLiveController:
                 return False
                 
             elif key == ord('r'):
-                # Reset environment
-                if self.env:
+                # Reset both environments
+                if self.env and self.map_env:
                     try:
-                        obs, info = self.env.reset()
+                        # Use same seed to keep environments synchronized
+                        seed = np.random.randint(0, 1000000)
+                        obs, info = self.env.reset(seed=seed)
+                        map_obs, map_info = self.map_env.reset(seed=seed)
+                        
                         self.current_obs = obs
+                        self.current_map_obs = map_obs
                         self.step_count = 0
                         self.episode_count += 1
-                        print(f"🔄 Environment reset (Episode {self.episode_count})")
+                        print(f"🔄 Both environments reset (Episode {self.episode_count})")
                     except Exception as e:
                         print(f"❌ Reset failed: {e}")
                         
@@ -255,12 +409,16 @@ class OpenCVLiveController:
                     if self.create_environment(new_variant):
                         self.variant_index = new_index
                         
-            elif self.env and key in self.action_map:
-                # Execute action
+            elif self.env and self.map_env and key in self.action_map:
+                # Execute action on both environments to keep them synchronized
                 action = self.action_map[key]
                 try:
+                    # Step both environments with the same action
                     obs, reward, terminated, truncated, info = self.env.step(action)
+                    map_obs, map_reward, map_terminated, map_truncated, map_info = self.map_env.step(action)
+                    
                     self.current_obs = obs
+                    self.current_map_obs = map_obs
                     self.step_count += 1
                     
                     # Print action feedback
@@ -271,8 +429,12 @@ class OpenCVLiveController:
                     
                     if terminated or truncated:
                         print(f"🏁 Episode ended! Reward: {reward:.2f}")
-                        obs, info = self.env.reset()
+                        # Reset both environments with same seed
+                        seed = np.random.randint(0, 1000000)
+                        obs, info = self.env.reset(seed=seed)
+                        map_obs, map_info = self.map_env.reset(seed=seed)
                         self.current_obs = obs
+                        self.current_map_obs = map_obs
                         self.step_count = 0
                         self.episode_count += 1
                         
@@ -298,13 +460,13 @@ class OpenCVLiveController:
         print("🎮 Nine Rooms OpenCV Live Controller")
         print("=" * 50)
         
-        print("🔄 Step 1: Creating initial environment...")
+        print("🔄 Step 1: Creating dual environments...")
         # Create initial environment
         if not self.create_environment(self.current_variant):
             print("❌ Failed to create initial environment")
             return
         
-        print("✅ Step 1 completed: Environment created")
+        print("✅ Step 1 completed: Dual environments created")
             
         print("\n📖 Controls:")
         print("   W/A/S/D - Move forward/turn left/move backward/turn right")
@@ -325,12 +487,13 @@ class OpenCVLiveController:
         
         try:
             while self.running:
-                # Get current observation
-                obs_img = self.get_observation_display()
+                # Get both views
+                ego_img = self.get_ego_view_display()
+                map_img = self.get_map_view_display()
                 
-                if obs_img is not None:
-                    # Create combined display with info
-                    display_img = self.create_info_panel(obs_img)
+                if ego_img is not None and map_img is not None:
+                    # Create combined dual-view display
+                    display_img = self.create_dual_view_display(ego_img, map_img)
                     
                     # Show image
                     cv2.imshow(window_name, display_img)
@@ -350,8 +513,10 @@ class OpenCVLiveController:
         finally:
             if self.env:
                 self.env.close()
+            if self.map_env:
+                self.map_env.close()
             cv2.destroyAllWindows()
-            print("\n👋 OpenCV live controller stopped")
+            print("\n👋 OpenCV dual-view live controller stopped")
 
 
 def main():
