@@ -93,7 +93,7 @@ class Room:
     ):
         """Create a new portal/opening in a wall of this room"""
 
-        if max_y == None:
+        if max_y is None:
             max_y = self.wall_height
 
         assert edge <= self.num_walls
@@ -109,9 +109,9 @@ class Room:
         dx, _, dz = e_dir
 
         # If the portal extents are specified by x coordinates
-        if min_x != None:
-            assert min_z == None and max_z == None
-            assert start_pos == None and end_pos == None
+        if min_x is not None:
+            assert min_z is None and max_z is None
+            assert start_pos is None and end_pos is None
             assert x0 != x1
 
             m0 = (min_x - x0) / dx
@@ -123,9 +123,9 @@ class Room:
             start_pos, end_pos = m0, m1
 
         # If the portal extents are specified by z coordinates
-        elif min_z != None:
-            assert min_x == None and max_x == None
-            assert start_pos == None and end_pos == None
+        elif min_z is not None:
+            assert min_x is None and max_x is None
+            assert start_pos is None and end_pos is None
             assert z0 != z1
 
             m0 = (min_z - z0) / dz
@@ -137,8 +137,8 @@ class Room:
             start_pos, end_pos = m0, m1
 
         else:
-            assert min_x == None and max_x == None
-            assert min_z == None and max_z == None
+            assert min_x is None and max_x is None
+            assert min_z is None and max_z is None
 
         assert end_pos > start_pos
         assert start_pos >= 0, "portal outside of wall extents"
@@ -175,20 +175,28 @@ class Room:
         Note: the wall polygons are quads, but the floor and
               ceiling can be arbitrary n-gons
         """
+        self._load_textures(rng)
+        self._generate_floor_geometry()
+        self._generate_ceiling_geometry()
+        self._generate_wall_geometry()
+        self._finalize_wall_geometry()
 
-        # Load the textures and do texture randomization
+    def _load_textures(self, rng):
+        """Load and randomize room textures."""
         self.wall_tex = Texture.get(self.wall_tex_name, rng)
         self.floor_tex = Texture.get(self.floor_tex_name, rng)
         self.ceil_tex = Texture.get(self.ceil_tex_name, rng)
 
-        # Generate the floor vertices
+    def _generate_floor_geometry(self):
+        """Generate floor vertices and texture coordinates."""
         self.floor_verts = self.outline
         self.floor_texcs = gen_texcs_floor(
             self.floor_tex,
             self.floor_verts
         )
 
-        # Generate the ceiling vertices
+    def _generate_ceiling_geometry(self):
+        """Generate ceiling vertices and texture coordinates."""
         # Flip the ceiling vertex order because of backface culling
         self.ceil_verts = np.flip(self.outline, axis=0) + self.wall_height * Y_VEC
         self.ceil_texcs = gen_texcs_floor(
@@ -196,6 +204,8 @@ class Room:
             self.ceil_verts
         )
 
+    def _generate_wall_geometry(self):
+        """Generate wall vertices, normals, texture coordinates, and collision segments."""
         self.wall_verts = []
         self.wall_norms = []
         self.wall_texcs = []
@@ -311,6 +321,8 @@ class Room:
                     self.wall_height
                 )
 
+    def _finalize_wall_geometry(self):
+        """Convert wall geometry lists to numpy arrays."""
         self.wall_verts = np.array(self.wall_verts)
         self.wall_norms = np.array(self.wall_norms)
 

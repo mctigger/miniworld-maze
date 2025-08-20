@@ -11,9 +11,12 @@ import time
 import argparse
 import numpy as np
 from miniworld_drstrategy.environments.factory import create_nine_rooms_env
+from miniworld_drstrategy.core.constants import (
+    DEFAULT_BENCHMARK_STEPS, DEFAULT_WARMUP_STEPS, RGB_CHANNELS, FLOAT32_BYTES, MB_TO_BYTES
+)
 
 
-def benchmark_rendering_performance(variant="NineRooms", sizes=None, num_steps=100, num_warmup=10):
+def benchmark_rendering_performance(variant="NineRooms", sizes=None, num_steps=DEFAULT_BENCHMARK_STEPS, num_warmup=DEFAULT_WARMUP_STEPS):
     """
     Benchmark rendering performance across different observation sizes.
     
@@ -78,8 +81,8 @@ def benchmark_rendering_performance(variant="NineRooms", sizes=None, num_steps=1
         std_step_time = np.std(step_times)
         
         # Memory per observation
-        pixels_per_obs = size * size * 3  # RGB
-        memory_mb = (pixels_per_obs * 4) / (1024 * 1024)  # Assume float32
+        pixels_per_obs = size * size * RGB_CHANNELS
+        memory_mb = (pixels_per_obs * FLOAT32_BYTES) / MB_TO_BYTES
         
         results[size] = {
             'fps': fps,

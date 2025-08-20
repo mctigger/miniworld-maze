@@ -1,7 +1,13 @@
 """Base Grid Rooms environment implementation."""
 
+from typing import List, Tuple, Union, Optional
 from gymnasium import spaces
 from ..core import CustomMiniWorldEnv, Box, COLORS, ObservationLevel
+from ..core.constants import (
+    DEFAULT_ROOM_SIZE, DEFAULT_DOOR_SIZE, DEFAULT_OBS_WIDTH, DEFAULT_OBS_HEIGHT,
+    MAX_EPISODE_STEPS, AGENT_START_POSITION, BOXES_PER_ROOM, BOX_GRID_SIZE,
+    BOX_SIZE_FRACTION, BOX_OFFSET_FRACTION, ROOM_BOUNDARY_MARGIN, ROOM_CENTER_FRACTION
+)
 
 
 class GridRoomsEnvironment(CustomMiniWorldEnv):
@@ -12,9 +18,19 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
     Subclasses pass their specific configurations directly to __init__.
     """
 
-    def __init__(self, grid_size, connections, textures, placed_room=None, 
-                 obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, room_size=5, door_size=2,
-                 agent_mode=None, obs_width=80, obs_height=80, **kwargs):
+    def __init__(self, 
+                 grid_size: int, 
+                 connections: List[Tuple[int, int]], 
+                 textures: List[str], 
+                 placed_room: Optional[int] = None, 
+                 obs_level: ObservationLevel = ObservationLevel.TOP_DOWN_PARTIAL, 
+                 continuous: bool = False, 
+                 room_size: Union[int, float] = DEFAULT_ROOM_SIZE, 
+                 door_size: Union[int, float] = DEFAULT_DOOR_SIZE,
+                 agent_mode: Optional[str] = None, 
+                 obs_width: int = DEFAULT_OBS_WIDTH, 
+                 obs_height: int = DEFAULT_OBS_HEIGHT, 
+                 **kwargs):
         """
         Initialize a grid-based room environment.
         
@@ -28,8 +44,8 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
             room_size: Size of each room in environment units (defaults to 5)
             door_size: Size of doors between rooms (defaults to 2)
             agent_mode: Agent rendering mode ('triangle', 'circle', 'empty')
-            obs_width: Observation width in pixels (defaults to 80)
-            obs_height: Observation height in pixels (defaults to 80)
+            obs_width: Observation width in pixels (defaults to DEFAULT_OBS_WIDTH)
+            obs_height: Observation height in pixels (defaults to DEFAULT_OBS_HEIGHT)
             **kwargs: Additional arguments passed to parent class
         """
         
@@ -47,7 +63,7 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
         
         # Set placed room
         if placed_room is None:
-            self.placed_room = 0
+            self.placed_room = 0  # Start in the first room
         else:
             assert 0 <= placed_room < self.total_rooms, f"placing point should be in 0~{self.total_rooms-1}"
             self.placed_room = placed_room
@@ -64,7 +80,7 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
         
         super().__init__(
             obs_level=obs_level,
-            max_episode_steps=1000,
+            max_episode_steps=MAX_EPISODE_STEPS,
             continuous=continuous,
             agent_mode=self.agent_mode,
             obs_width=obs_width,
@@ -75,7 +91,7 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
         if not self.continuous:
             self.action_space = spaces.Discrete(self.actions.move_forward+1)
     
-    def _gen_world(self, pos=None):
+    def _generate_world_layout(self, pos=None):
         rooms = []
         
         # Create rooms in grid layout
@@ -83,9 +99,9 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
             for j in range(self.grid_size):
                 rooms.append(self.add_rect_room(
                     min_x=self.room_size*j,
-                    max_x=self.room_size*(j+0.95), 
+                    max_x=self.room_size*(j + (1 - ROOM_BOUNDARY_MARGIN)), 
                     min_z=self.room_size*i,
-                    max_z=self.room_size*(i+0.95), 
+                    max_z=self.room_size*(i + (1 - ROOM_BOUNDARY_MARGIN)), 
                     floor_tex=self.textures[self.grid_size*i+j]
                 ))
         
@@ -106,28 +122,51 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
         
         # Place agent
         if pos is None:
-            self.place_agent(pos=[2.5, 0, 2.5])
+            self.place_agent(pos=list(AGENT_START_POSITION))
         else:
             self.place_agent(pos=[pos[0], 0, pos[1]])
 
-        # Place box entities in each room
-        for i in range(self.grid_size):
-            for j in range(self.grid_size):
-                _start_x = self.room_size*j
-                _start_y = self.room_size*i
-                for k in range(9):
+        # Place box entities in each room in a 3x3 grid pattern
+        self._place_room_boxes()
+
+    def _place_room_boxes(self):
+        """Place colored box entities in each room using a 3x3 grid pattern."""
+        available_colors = list(COLORS.keys())
+        num_colors = len(available_colors)
+        
+        for room_row in range(self.grid_size):
+            for room_col in range(self.grid_size):
+                room_start_x = self.room_size * room_col
+                room_start_z = self.room_size * room_row
+                
+                # Place boxes in a 3x3 grid within each room
+                for box_index in range(BOXES_PER_ROOM):
+                    box_row = box_index // BOX_GRID_SIZE
+                    box_col = box_index % BOX_GRID_SIZE
+                    
+                    # Calculate unique color index for variety
+                    color_index = (box_index + 1 + (room_row + 1) * (room_col + 1)) % num_colors
+                    box_color = available_colors[color_index]
+                    
+                    # Calculate box position within room
+                    box_x = (room_start_x + 
+                            ROOM_CENTER_FRACTION * self.room_size * box_col + 
+                            BOX_OFFSET_FRACTION * self.room_size)
+                    box_z = (room_start_z + 
+                            ROOM_CENTER_FRACTION * self.room_size * box_row + 
+                            BOX_OFFSET_FRACTION * self.room_size)
+                    
+                    # Create and place the box
+                    box = Box(
+                        color=box_color,
+                        transparentable=True,
+                        size=BOX_SIZE_FRACTION * self.room_size,
+                        static=True
+                    )
+                    
                     self.place_entity(
-                        ent=Box(
-                            list(COLORS.keys())[(k+1+(i+1)*(j+1))%9],
-                            transparentable=True,
-                            size=2*self.room_size/15,
-                            static=True
-                        ),
-                        pos=[
-                            _start_x + (self.room_size/3)*(k%3) + 0.16*self.room_size,
-                            0,
-                            _start_y + (self.room_size/3)*(k//3) + 0.16*self.room_size
-                        ],
+                        ent=box,
+                        pos=[box_x, 0, box_z],
                         dir=0
                     )
 

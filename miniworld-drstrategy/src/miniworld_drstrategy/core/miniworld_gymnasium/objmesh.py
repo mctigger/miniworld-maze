@@ -1,3 +1,5 @@
+"""OBJ mesh loading and rendering utilities for MiniWorld environments."""
+
 import os
 import math
 import numpy as np
@@ -7,7 +9,10 @@ from .utils import *
 
 class ObjMesh:
     """
-    Load and render OBJ model files
+    Load and render OBJ model files for 3D entity meshes.
+    
+    Provides functionality to load Wavefront OBJ files, parse vertices and faces,
+    and render them using OpenGL. Includes mesh caching for performance.
     """
 
     # Loaded mesh files, indexed by mesh file path

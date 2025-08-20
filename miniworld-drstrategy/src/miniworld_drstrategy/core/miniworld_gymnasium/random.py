@@ -1,31 +1,54 @@
+"""Random number generation utilities for MiniWorld environments."""
+
 import numpy as np
 from gymnasium.utils import seeding
 
+
 class RandGen:
     """
-    Random value generator
+    Thread-safe random value generator for environment simulation.
+    
+    Provides consistent random number generation across different runs
+    when seeded properly, which is essential for reproducible experiments.
     """
 
     def __init__(self, seed=None):
+        """Initialize random generator with optional seed."""
         self.np_random, _ = seeding.np_random(seed)
 
     def random_int(self, low, high):
         """
-        Generate random integer in [low,high[
+        Generate random integer in the range [low, high).
+        
+        Args:
+            low: Lower bound (inclusive)
+            high: Upper bound (exclusive)
+            
+        Returns:
+            Random integer in specified range
         """
-
         return self.np_random.integers(low, high)
 
     def random_float(self, low, high, shape=None):
         """
-        Generate random float in [low,high[
+        Generate random float(s) in the range [low, high).
+        
+        Args:
+            low: Lower bound (inclusive)
+            high: Upper bound (exclusive) 
+            shape: Optional shape for array output
+            
+        Returns:
+            Random float or array of floats in specified range
         """
-
         return self.np_random.uniform(low, high, size=shape)
 
     def random_bool(self):
         """
-        Generate random boolean value
+        Generate random boolean value with 50/50 probability.
+        
+        Returns:
+            Random boolean (True or False)
         """
 
         return (self.np_random.integers(0, 2) == 0)

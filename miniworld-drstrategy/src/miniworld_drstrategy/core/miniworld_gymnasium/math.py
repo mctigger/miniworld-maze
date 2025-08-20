@@ -1,15 +1,26 @@
+"""Mathematical utility functions for 3D geometry and transformations."""
+
 import math
 import numpy as np
 
-# X, Y, Z-axis vectors
-X_VEC = np.array([1, 0, 0])
-Y_VEC = np.array([0, 1, 0])
-Z_VEC = np.array([0, 0, 1])
+# Standard 3D coordinate system basis vectors
+X_VEC = np.array([1, 0, 0])  # X-axis unit vector
+Y_VEC = np.array([0, 1, 0])  # Y-axis unit vector (up)
+Z_VEC = np.array([0, 0, 1])  # Z-axis unit vector
+
 
 def gen_rot_matrix(axis, angle):
     """
-    Rotation matrix for a counterclockwise rotation around a given axis
-    The angle should be in radians
+    Generate a rotation matrix for counterclockwise rotation around an axis.
+    
+    Uses Rodrigues' rotation formula to compute the rotation matrix.
+    
+    Args:
+        axis: 3D vector representing the rotation axis (will be normalized)
+        angle: Rotation angle in radians
+        
+    Returns:
+        3x3 numpy array representing the rotation matrix
     """
 
     axis = axis / math.sqrt(np.dot(axis, axis))
@@ -24,7 +35,18 @@ def gen_rot_matrix(axis, angle):
 
 def intersect_circle_segs(point, radius, segs):
     """
-    Test if a circle intersects with any wall segments
+    Test if a circle intersects with any wall segments using 2D projection.
+    
+    Projects the 3D problem onto the XZ plane (ignoring Y coordinate) and
+    performs efficient vectorized collision detection against multiple segments.
+    
+    Args:
+        point: 3D position of circle center
+        radius: Radius of the circle
+        segs: Array of wall segments with shape (N, 2, 3) representing N segments
+        
+    Returns:
+        Boolean indicating whether the circle intersects any segment
     """
 
     # Ignore Y coordinate

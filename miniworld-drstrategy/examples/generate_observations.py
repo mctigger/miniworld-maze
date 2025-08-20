@@ -24,7 +24,7 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
     env = create_nine_rooms_env(variant=variant, size=64)
     
     # Get base environment for direct render access
-    base_env = env._env
+    base_env = env.env if hasattr(env, 'env') else env
     while hasattr(base_env, 'env') or hasattr(base_env, '_env'):
         if hasattr(base_env, 'env'):
             base_env = base_env.env

@@ -3,24 +3,30 @@
 from pyglet.gl import *
 
 
-def drawAxes(len=0.1):
+def drawAxes(axis_length=0.1):
     """
-    Draw X/Y/Z axes in red/green/blue colors
+    Draw coordinate system axes in red/green/blue colors.
+    
+    Renders X, Y, Z axes as colored line segments for debugging and visualization.
+    X-axis is red, Y-axis is green, Z-axis is blue.
+    
+    Args:
+        axis_length (float): Length of each axis line, defaults to 0.1 units
     """
 
     glBegin(GL_LINES)
 
     glColor3f(1, 0, 0)
     glVertex3f(0, 0, 0)
-    glVertex3f(len, 0, 0)
+    glVertex3f(axis_length, 0, 0)
 
     glColor3f(0, 1, 0)
     glVertex3f(0, 0, 0)
-    glVertex3f(0, len, 0)
+    glVertex3f(0, axis_length, 0)
 
     glColor3f(0, 0, 1)
     glVertex3f(0, 0, 0)
-    glVertex3f(0, 0, len)
+    glVertex3f(0, 0, axis_length)
 
     glEnd()
 

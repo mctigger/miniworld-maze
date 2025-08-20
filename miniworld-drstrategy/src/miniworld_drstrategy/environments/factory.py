@@ -2,17 +2,19 @@
 
 import numpy as np
 import cv2
+import gymnasium as gym
 from ..wrappers.image_transforms import ImageToPyTorch
 from ..core import ObservationLevel
+from ..core.constants import FACTORY_ROOM_SIZE, FACTORY_DOOR_SIZE
 from .nine_rooms import NineRooms
 from .spiral_nine_rooms import SpiralNineRooms
 from .twenty_five_rooms import TwentyFiveRooms
 
 
-class NineRoomsEnvironmentWrapper:
+class NineRoomsEnvironmentWrapper(gym.Wrapper):
     """Unified wrapper for all Nine Rooms environment variants."""
     
-    def __init__(self, variant="NineRooms", obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, size=64, room_size=15, door_size=2.5):
+    def __init__(self, variant="NineRooms", obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, size=64, room_size=FACTORY_ROOM_SIZE, door_size=FACTORY_DOOR_SIZE):
         """
         Create a Nine Rooms environment variant.
         
@@ -51,26 +53,14 @@ class NineRoomsEnvironmentWrapper:
         # Apply wrappers - no resize needed since we render at target size
         env = ImageToPyTorch(base_env)
         
-        self._env = env
-        self.action_space = env.action_space
-        self.observation_space = env.observation_space
+        # Initialize gym.Wrapper with the wrapped environment
+        super().__init__(env)
     
-    def reset(self, **kwargs):
-        return self._env.reset(**kwargs)
-    
-    def step(self, action):
-        return self._env.step(action)
-    
-    def render(self, mode='rgb_array'):
-        return self._env.render()
-    
-    def close(self):
-        return self._env.close()
     
     def render_on_pos(self, pos):
         """Render observation from a specific position."""
         # Get access to the base environment
-        base_env = self._env
+        base_env = self.env
         while hasattr(base_env, 'env') or hasattr(base_env, '_env'):
             if hasattr(base_env, 'env'):
                 base_env = base_env.env
