@@ -319,26 +319,52 @@ class UnifiedMiniWorldEnv(gym.Env):
         # Return first observation with info dict for Gymnasium compatibility
         return obs, {}
 
-    def _generate_observation(self):
-        """Generate observation based on current observation level."""
+    def _generate_observation(self, render_agent: bool = None):
+        """Generate observation based on current observation level.
+        
+        Args:
+            render_agent: Whether to render the agent in the observation.
+                         If None, uses default behavior based on observation level.
+        """
         # Import ObservationLevel here to avoid circular imports
         from ..observation_types import ObservationLevel
         
         if self.obs_level == ObservationLevel.TOP_DOWN_PARTIAL:
             if self.agent_mode == 'empty':
-                return self.render_top_view(POMDP=True, render_ag=False)
+                # Agent mode 'empty' always renders without agent
+                render_ag = False
+            elif render_agent is not None:
+                # Use explicit render_agent parameter
+                render_ag = render_agent
             else:
-                return self.render_top_view(POMDP=True)
+                # Default behavior: render agent
+                render_ag = True
+            return self.render_top_view(POMDP=True, render_ag=render_ag)
 
         elif self.obs_level == ObservationLevel.TOP_DOWN_FULL:
-            return self.render_top_view(POMDP=False)
+            # Use explicit render_agent parameter or default to True
+            render_ag = render_agent if render_agent is not None else True
+            return self.render_top_view(POMDP=False, render_ag=render_ag)
 
         elif self.obs_level == ObservationLevel.FIRST_PERSON:
+            # First person view doesn't include the agent anyway
             return self.render_obs()
 
         else:
             valid_levels = list(ObservationLevel)
             raise ValueError(f"Invalid obs_level {self.obs_level}. Must be one of {valid_levels}")
+
+    def get_observation(self, render_agent: bool = None):
+        """Public method to generate observation with optional agent rendering control.
+        
+        Args:
+            render_agent: Whether to render the agent in the observation.
+                         If None, uses default behavior based on observation level.
+                         
+        Returns:
+            np.ndarray: Generated observation image
+        """
+        return self._generate_observation(render_agent=render_agent)
 
     def _calculate_carried_object_position(self, agent_pos, ent):
         """Compute the position at which to place an object being carried."""

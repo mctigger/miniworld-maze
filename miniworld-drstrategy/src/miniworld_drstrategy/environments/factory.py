@@ -14,7 +14,7 @@ from .twenty_five_rooms import TwentyFiveRooms
 class NineRoomsEnvironmentWrapper(gym.Wrapper):
     """Unified wrapper for all Nine Rooms environment variants."""
     
-    def __init__(self, variant="NineRooms", obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, size=64, room_size=FACTORY_ROOM_SIZE, door_size=FACTORY_DOOR_SIZE):
+    def __init__(self, variant="NineRooms", obs_level=ObservationLevel.TOP_DOWN_PARTIAL, continuous=False, size=64, room_size=FACTORY_ROOM_SIZE, door_size=FACTORY_DOOR_SIZE, agent_mode=None):
         """
         Create a Nine Rooms environment variant.
         
@@ -25,6 +25,7 @@ class NineRoomsEnvironmentWrapper(gym.Wrapper):
             size: Observation image size (rendered directly at this size to avoid resizing)
             room_size: Size of each room in environment units
             door_size: Size of doors between rooms
+            agent_mode: Agent rendering mode ('empty', 'circle', 'triangle', or None for default)
         """
         self.variant = variant
         
@@ -47,7 +48,8 @@ class NineRoomsEnvironmentWrapper(gym.Wrapper):
             obs_level=obs_level,
             continuous=continuous,
             obs_width=size,
-            obs_height=size
+            obs_height=size,
+            agent_mode=agent_mode
         )
         
         # Apply wrappers - no resize needed since we render at target size

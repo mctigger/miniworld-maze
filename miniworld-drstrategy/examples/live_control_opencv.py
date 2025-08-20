@@ -110,14 +110,16 @@ class OpenCVLiveController:
             self.env = create_nine_rooms_env(
                 variant=variant, 
                 size=self.size,
-                obs_level=self.obs_level
+                obs_level=self.obs_level,
+                agent_mode='triangle'  # Make agent visible for better demo
             )
             
             # Create separate environment for top-down map
             self.map_env = create_nine_rooms_env(
                 variant=variant, 
                 size=self.size,
-                obs_level=ObservationLevel.TOP_DOWN_FULL  # Always use full top-down for map
+                obs_level=ObservationLevel.TOP_DOWN_FULL,  # Always use full top-down for map
+                agent_mode='triangle'  # Make agent visible in map view
             )
             
             # Synchronize both environments to same initial state
@@ -170,26 +172,49 @@ class OpenCVLiveController:
     
     def get_map_view_display(self) -> Optional[np.ndarray]:
         """
-        Get current map observation with agent position marker.
+        Get current map observation with agent rendered by the engine.
         
         Returns:
             BGR image array for OpenCV or None if failed
         """
         try:
-            if self.current_map_obs is not None and self.map_env is not None:
-                # Convert from CHW to HWC
-                obs_hwc = np.transpose(self.current_map_obs, (1, 2, 0))
+            if self.map_env is not None:
+                # Get base environment to access the new get_observation method
+                base_env = self.map_env
+                while hasattr(base_env, 'env') or hasattr(base_env, '_env'):
+                    if hasattr(base_env, 'env'):
+                        base_env = base_env.env
+                    elif hasattr(base_env, '_env'):
+                        base_env = base_env._env
+                    else:
+                        break
                 
-                # Convert RGB to BGR for OpenCV
-                obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
-                
-                # Resize for display
-                obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
-                
-                # Add agent position marker
-                obs_with_agent = self._add_agent_marker(obs_resized)
-                
-                return obs_with_agent
+                # Use the new get_observation method with agent rendering enabled
+                if hasattr(base_env, 'get_observation'):
+                    map_obs_with_agent = base_env.get_observation(render_agent=True)
+                    
+                    if map_obs_with_agent is not None:
+                        # get_observation returns HWC format, so use directly
+                        obs_hwc = map_obs_with_agent
+                        
+                        # Convert RGB to BGR for OpenCV
+                        obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+                        
+                        # Resize for display
+                        obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+                        
+                        return obs_resized
+                    else:
+                        return self._create_placeholder("No Map View")
+                else:
+                    # Fallback to current observation with manual overlay (CHW format)
+                    if self.current_map_obs is not None:
+                        obs_hwc = np.transpose(self.current_map_obs, (1, 2, 0))  # CHW to HWC
+                        obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+                        obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+                        return self._add_agent_marker(obs_resized)
+                    else:
+                        return self._create_placeholder("No Map View")
             else:
                 return self._create_placeholder("No Map View")
                 
@@ -331,19 +356,14 @@ class OpenCVLiveController:
         cv2.putText(combined_img, "Map View (TOP_DOWN_FULL)", 
                    (map_x, map_y - 10), font, font_scale, color, thickness)
         
-        # Add agent marker legend
-        legend_x = map_x + self.view_size - 180
+        # Add agent rendering info to legend
+        legend_x = map_x + self.view_size - 150
         legend_y = map_y + 20
         legend_font_scale = 0.4
         
-        # Draw sample agent marker in legend
-        cv2.circle(combined_img, (legend_x + 15, legend_y + 5), 4, (0, 255, 255), -1)  # Yellow circle
-        cv2.circle(combined_img, (legend_x + 15, legend_y + 5), 6, (0, 0, 0), 1)      # Black outline
-        cv2.line(combined_img, (legend_x + 15, legend_y + 5), (legend_x + 25, legend_y + 5), (0, 255, 0), 2)  # Green direction line
-        
-        # Legend text
-        cv2.putText(combined_img, "Agent Position & Direction", 
-                   (legend_x + 35, legend_y + 10), font, legend_font_scale, (200, 200, 200), 1)
+        # Legend text - agent is now rendered by the engine
+        cv2.putText(combined_img, "Agent Rendered by Engine", 
+                   (legend_x, legend_y), font, legend_font_scale, (200, 200, 200), 1)
         
         # Create info panel at bottom
         info_y = self.view_size + 70
