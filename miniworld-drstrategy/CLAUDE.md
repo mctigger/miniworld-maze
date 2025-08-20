@@ -15,6 +15,7 @@ The following commands are pre-approved for execution:
 - `cd` - Change directory
 - `source` - Load environment variables and activate virtual environments
 - `PYTHONPATH` - Set Python module search path environment variable
+- `MUJOCO_GL` - MuJoCo rendering backend environment variable
 - `black` - Python code formatter
 - `isort` - Import sorter
 - `flake8` - Python linter
@@ -31,9 +32,17 @@ Located at: `miniworld-drstrategy/`
 miniworld-drstrategy/
 ├── pyproject.toml                 # Modern Python packaging
 ├── README.md                      # Documentation
+├── CLAUDE.md                      # This configuration file
+├── examples/                      # Usage examples and demos
+│   ├── benchmark_rendering.py     # Performance benchmarking
+│   ├── generate_observations.py   # Observation generation example
+│   └── observation_level_demo.py  # Observation level demonstration
 └── src/
     └── miniworld_drstrategy/      # Main package
         ├── core/                  # 3D rendering engine
+        │   ├── constants.py       # Environment constants
+        │   ├── observation_types.py # Observation level enums
+        │   └── miniworld_gymnasium/ # Core 3D engine
         ├── environments/          # Environment implementations
         ├── tools/                 # CLI tools & observation generator
         └── wrappers/              # Gymnasium wrappers
@@ -67,10 +76,15 @@ cd miniworld-drstrategy/
 # Install package in development mode
 pip install -e .
 
-# Generate observations
+# Generate observations (using installed script)
 generate-observations NineRooms
 generate-observations SpiralNineRooms  
 generate-observations TwentyFiveRooms --high-res-full
+
+# Alternative: Run examples directly
+MUJOCO_GL=egl python examples/generate_observations.py NineRooms --output-dir test_output
+MUJOCO_GL=egl python examples/benchmark_rendering.py --all-variants
+MUJOCO_GL=egl python examples/observation_level_demo.py
 
 # Run tests
 pytest
@@ -85,13 +99,26 @@ flake8 src/
 
 ### Python API Usage
 ```python
-from miniworld_drstrategy import create_nine_rooms_env
+from miniworld_drstrategy import create_nine_rooms_env, ObservationLevel
 
-# Create environment
+# Create environment with different variants
 env = create_nine_rooms_env(variant='NineRooms', size=64)
 obs, info = env.reset()
 print(f'Observation shape: {obs.shape}')
+
+# Use different observation levels
+env2 = create_nine_rooms_env(
+    variant='SpiralNineRooms', 
+    obs_level=ObservationLevel.FIRST_PERSON, 
+    size=128
+)
+
+# Test render_on_pos functionality
+render_obs = env.render_on_pos([15.0, 0.0, 15.0])
+print(f'Render observation shape: {render_obs.shape}')
+
 env.close()
+env2.close()
 ```
 
 ## Development Workflow
@@ -105,8 +132,27 @@ env.close()
 
 When working with this package, you may need:
 ```bash
-export MUJOCO_GL=osmesa  # For headless rendering
+export MUJOCO_GL=egl     # For headless rendering (recommended)
+export MUJOCO_GL=osmesa  # Alternative headless rendering
+export MUJOCO_GL=glfw    # For desktop rendering with window
 ```
+
+## Available Environments
+
+### Variants
+- **NineRooms**: Standard 3x3 grid layout
+- **SpiralNineRooms**: Spiral-shaped room connections
+- **TwentyFiveRooms**: Larger 5x5 grid layout
+
+### Observation Levels
+- **TOP_DOWN_PARTIAL**: Partial top-down view (default)
+- **TOP_DOWN_FULL**: Complete top-down view
+- **FIRST_PERSON**: Agent's first-person perspective
+
+### Supported Sizes
+- 64x64 (default, fastest)
+- 128x128 (balanced quality/performance)
+- 256x256 (high quality, slower)
 
 ## Important Instructions
 
