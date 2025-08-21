@@ -2,7 +2,8 @@
 
 from typing import List, Tuple, Union, Optional
 from gymnasium import spaces
-from ..core import CustomMiniWorldEnv, Box, COLORS, ObservationLevel
+from ..core.miniworld_gymnasium.unified_env import UnifiedMiniWorldEnv
+from ..core import Box, COLORS, ObservationLevel
 from ..core.constants import (
     DEFAULT_ROOM_SIZE, DEFAULT_DOOR_SIZE, DEFAULT_OBS_WIDTH, DEFAULT_OBS_HEIGHT,
     MAX_EPISODE_STEPS, AGENT_START_POSITION, BOXES_PER_ROOM, BOX_GRID_SIZE,
@@ -10,7 +11,7 @@ from ..core.constants import (
 )
 
 
-class GridRoomsEnvironment(CustomMiniWorldEnv):
+class GridRoomsEnvironment(UnifiedMiniWorldEnv):
     """
     Base class for grid-based room environments.
     
@@ -77,6 +78,9 @@ class GridRoomsEnvironment(CustomMiniWorldEnv):
 
         self.room_size = room_size
         self.door_size = door_size
+        
+        # Mark this as a custom environment for background color handling
+        self._is_custom_env = True
         
         super().__init__(
             obs_level=obs_level,
