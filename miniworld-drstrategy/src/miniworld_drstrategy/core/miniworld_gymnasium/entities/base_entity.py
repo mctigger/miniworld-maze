@@ -1,25 +1,27 @@
 """Base entity classes for MiniWorld environments."""
 
 import math
+
 import numpy as np
 from pyglet.gl import *
+
 from ..math import *
 from ..objmesh import ObjMesh
 
 # Map of color names to RGB values
 COLORS = {
-    'red'   : np.array([1.0, 0.0, 0.0]),
-    'green' : np.array([0.0, 1.0, 0.0]),
-    'blue'  : np.array([0.0, 0.0, 1.0]),
-    'purple': np.array([0.44, 0.15, 0.76]),
-    'yellow': np.array([1.00, 1.00, 0.00]),
+    "red": np.array([1.0, 0.0, 0.0]),
+    "green": np.array([0.0, 1.0, 0.0]),
+    "blue": np.array([0.0, 0.0, 1.0]),
+    "purple": np.array([0.44, 0.15, 0.76]),
+    "yellow": np.array([1.00, 1.00, 0.00]),
     # 'grey'  : np.array([0.39, 0.39, 0.39]),
-    'light_yellow'  : np.array([0.5, 0.00, 0.39]),
-    'color1'  : np.array([0.7, 0.9, 0.39]),
-    'color2'  : np.array([0.15, 0.3, 0.39]),
-    'color3'   : np.array([1.0, 0.5, 0.0]),
-    'color4'   : np.array([1.0, 0.0, 0.5]),
-    'color5'  : np.array([0.3, 0.7, 0.1]),
+    "light_yellow": np.array([0.5, 0.00, 0.39]),
+    "color1": np.array([0.7, 0.9, 0.39]),
+    "color2": np.array([0.15, 0.3, 0.39]),
+    "color3": np.array([1.0, 0.5, 0.0]),
+    "color4": np.array([1.0, 0.0, 0.5]),
+    "color5": np.array([0.3, 0.7, 0.1]),
 }
 
 # List of color names, sorted alphabetically
@@ -28,7 +30,7 @@ COLOR_NAMES = sorted(list(COLORS.keys()))
 
 class Entity:
     """Base class for all entities in the MiniWorld environment."""
-    
+
     def __init__(self):
         # World position
         # Note: for most entities, the position is at floor level
@@ -92,7 +94,7 @@ class Entity:
 
 class MeshEnt(Entity):
     """Entity whose appearance is defined by a mesh file
-    
+
     Args:
         mesh_name: Name of the mesh file
         height: Scale the model to this height
@@ -115,7 +117,7 @@ class MeshEnt(Entity):
         self.scale = height / sy
 
         # Compute the radius and height
-        self.radius = math.sqrt(sx*sx + sz*sz) * self.scale
+        self.radius = math.sqrt(sx * sx + sz * sz) * self.scale
         self.height = height
 
     def render(self):

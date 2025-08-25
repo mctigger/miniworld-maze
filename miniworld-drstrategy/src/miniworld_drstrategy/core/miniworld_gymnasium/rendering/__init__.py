@@ -1,7 +1,7 @@
 """Rendering modules for MiniWorld environments."""
 
-from .texture import Texture
-from .framebuffer import FrameBuffer
 from .drawing import drawAxes, drawBox
+from .framebuffer import FrameBuffer
+from .texture import Texture
 
 __all__ = ["Texture", "FrameBuffer", "drawAxes", "drawBox"]

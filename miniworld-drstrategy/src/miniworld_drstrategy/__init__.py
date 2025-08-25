@@ -1,13 +1,13 @@
 """
-MiniWorld DrStrategy - Nine Rooms Environment Package
+MiniWorld DrStrategy - Multi-Room Maze Environment Package
 
-This package contains the complete implementation of the Nine Rooms environment
+This package contains complete implementations of multi-room maze environment
 variants used in the DrStrategy paper, along with tools for generating observations.
 
 Available environment variants:
-- NineRooms: Classic 3x3 grid of rooms
-- SpiralNineRooms: 3x3 grid with spiral connections
-- TwentyFiveRooms: Large 5x5 grid with 40 connections
+- NineRooms: Classic 3x3 grid of rooms (9 rooms total)
+- SpiralNineRooms: 3x3 grid with spiral connections (9 rooms total)
+- TwentyFiveRooms: Large 5x5 grid with 40 connections (25 rooms total)
 
 Main modules:
 - environments: Environment implementations
@@ -15,18 +15,23 @@ Main modules:
 - tools: Observation generation and utilities
 """
 
-from .environments.factory import create_nine_rooms_env, NineRoomsEnvironmentWrapper
+from .core import ObservationLevel
+from .environments.factory import (
+    NineRoomsEnvironmentWrapper,
+    create_drstrategy_env,
+    create_nine_rooms_env,
+)
 from .environments.nine_rooms import NineRooms
 from .environments.spiral_nine_rooms import SpiralNineRooms
 from .environments.twenty_five_rooms import TwentyFiveRooms
-from .core import ObservationLevel
 
 __version__ = "1.0.0"
 __all__ = [
-    "create_nine_rooms_env",
-    "NineRoomsEnvironmentWrapper", 
+    "create_drstrategy_env",
+    "create_nine_rooms_env",  # deprecated but kept for backward compatibility
+    "NineRoomsEnvironmentWrapper",
     "NineRooms",
-    "SpiralNineRooms", 
+    "SpiralNineRooms",
     "TwentyFiveRooms",
-    "ObservationLevel"
+    "ObservationLevel",
 ]

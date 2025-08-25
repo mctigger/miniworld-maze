@@ -1,11 +1,7 @@
 """Entity classes for MiniWorld environments."""
 
-from .base_entity import Entity, MeshEnt, COLORS, COLOR_NAMES
-from .objects import Box, Key, Ball
 from .agent import Agent
+from .base_entity import COLOR_NAMES, COLORS, Entity, MeshEnt
+from .objects import Ball, Box, Key
 
-__all__ = [
-    "Entity", "MeshEnt", "COLORS", "COLOR_NAMES",
-    "Box", "Key", "Ball", 
-    "Agent"
-]
+__all__ = ["Entity", "MeshEnt", "COLORS", "COLOR_NAMES", "Box", "Key", "Ball", "Agent"]

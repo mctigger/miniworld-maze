@@ -1,8 +1,10 @@
 """Texture management for MiniWorld environments."""
 
 import os
+
 import pyglet
 from pyglet.gl import *
+
 from ..utils import get_file_path
 
 
@@ -29,7 +31,7 @@ class Texture:
         # Get an inventory of the existing texture files
         if len(paths) == 0:
             for i in range(1, 10):
-                path = get_file_path('textures', '%s_%d' % (tex_name, i), 'png')
+                path = get_file_path("textures", "%s_%d" % (tex_name, i), "png")
 
                 if not os.path.exists(path):
                     break
@@ -56,7 +58,7 @@ class Texture:
         In mose cases, this method should not be used directly.
         """
 
-        #print('Loading texture "%s"' % tex_path)
+        # print('Loading texture "%s"' % tex_path)
 
         img = pyglet.image.load(tex_path)
         tex = img.get_texture()
@@ -72,7 +74,7 @@ class Texture:
             0,
             GL_RGBA,
             GL_UNSIGNED_BYTE,
-            img.get_image_data().get_data('RGBA', img.width * 4)
+            img.get_image_data().get_data("RGBA", img.width * 4),
         )
 
         # Generate mipmaps (multiple levels of detail)

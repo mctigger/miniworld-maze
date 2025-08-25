@@ -1,54 +1,67 @@
 """Unified MiniWorld environment class combining CustomEnv and BaseEnv functionality."""
 
 import math
-from enum import IntEnum
-import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
-import pyglet
-from pyglet.gl import *
 from ctypes import POINTER
+from enum import IntEnum
 
-from .random import RandGen
-from .opengl import *
-from .objmesh import *
+import gymnasium as gym
+import numpy as np
+import pyglet
+from gymnasium import spaces
+from pyglet.gl import *
+
 from .entities import *
 from .math import *
-from .params import DEFAULT_PARAMS
-from .room import Room
+from .objmesh import *
 from .occlusion_queries import OcclusionQueryManager
+from .opengl import *
+from .params import DEFAULT_PARAMS
+from .random import RandGen
+from .room import Room
 
 # Optional architectural improvements
 try:
-    from .rendering_engine import RenderingEngine
     from .entity_manager import EntityManager
+    from .rendering_engine import RenderingEngine
+
     ARCHITECTURAL_IMPROVEMENTS_AVAILABLE = True
 except ImportError:
     RenderingEngine = None
     EntityManager = None
     ARCHITECTURAL_IMPROVEMENTS_AVAILABLE = False
 from ..constants import (
-    TOPDOWN_FRAMEBUFFER_SCALE, PICKUP_REACH_MULTIPLIER, PICKUP_RADIUS_MULTIPLIER,
-    CARRY_POSITION_OFFSET, INTERACTION_DISTANCE_MULTIPLIER, NEAR_CLIPPING_PLANE,
-    FAR_CLIPPING_PLANE, ORTHOGRAPHIC_DEPTH_RANGE, OCCLUSION_QUERY_BOX_SIZE,
-    OCCLUSION_QUERY_BOX_HEIGHT, DEFAULT_DISPLAY_WIDTH, DEFAULT_WINDOW_WIDTH,
-    DEFAULT_WINDOW_HEIGHT, FONT_SIZE, TEXT_LABEL_WIDTH, TEXT_MARGIN_X, TEXT_MARGIN_Y,
-    EDGE_FACING_THRESHOLD, EDGE_TOUCHING_THRESHOLD, PORTAL_CONNECTION_TOLERANCE
+    CARRY_POSITION_OFFSET,
+    DEFAULT_DISPLAY_WIDTH,
+    DEFAULT_WINDOW_HEIGHT,
+    DEFAULT_WINDOW_WIDTH,
+    EDGE_FACING_THRESHOLD,
+    EDGE_TOUCHING_THRESHOLD,
+    FAR_CLIPPING_PLANE,
+    FONT_SIZE,
+    INTERACTION_DISTANCE_MULTIPLIER,
+    NEAR_CLIPPING_PLANE,
+    OCCLUSION_QUERY_BOX_HEIGHT,
+    OCCLUSION_QUERY_BOX_SIZE,
+    ORTHOGRAPHIC_DEPTH_RANGE,
+    PICKUP_RADIUS_MULTIPLIER,
+    PICKUP_REACH_MULTIPLIER,
+    PORTAL_CONNECTION_TOLERANCE,
+    TEXT_LABEL_WIDTH,
+    TEXT_MARGIN_X,
+    TEXT_MARGIN_Y,
+    TOPDOWN_FRAMEBUFFER_SCALE,
 )
 
 
 class UnifiedMiniWorldEnv(gym.Env):
     """
     Unified base class for MiniWorld environments combining CustomEnv and BaseEnv functionality.
-    
+
     This class eliminates code duplication by providing a single implementation that supports
     both the enhanced features of CustomMiniWorldEnv and the legacy BaseEnv functionality.
     """
 
-    metadata = {
-        'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': 30
-    }
+    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 30}
 
     # Enumeration of possible actions
     class Actions(IntEnum):
@@ -74,18 +87,18 @@ class UnifiedMiniWorldEnv(gym.Env):
         self,
         obs_level=3,
         continuous=False,
-        agent_mode='circle',
+        agent_mode="circle",
         max_episode_steps=1500,
         obs_width=80,
         obs_height=80,
         window_width=DEFAULT_WINDOW_WIDTH,
         window_height=DEFAULT_WINDOW_HEIGHT,
         params=DEFAULT_PARAMS,
-        domain_rand=False
+        domain_rand=False,
     ):
         """
         Initialize unified MiniWorld environment.
-        
+
         Args:
             obs_level: Observation level (1=TOP_DOWN_PARTIAL, 2=TOP_DOWN_FULL, 3=FIRST_PERSON)
             continuous: Whether to use continuous actions
@@ -108,22 +121,26 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         # Setup action space
         self._setup_action_space()
-        
+
         # Setup observation space
         self._setup_observation_space(obs_width, obs_height)
-        
+
         # Initialize OpenGL context and rendering
         self._initialize_opengl_context()
-        
+
         # Setup rendering buffers
-        self._setup_rendering_buffers(obs_width, obs_height, window_width, window_height)
-        
+        self._setup_rendering_buffers(
+            obs_width, obs_height, window_width, window_height
+        )
+
         # Initialize UI components
-        self._initialize_ui_components(window_width, window_height, obs_width, obs_height)
-        
+        self._initialize_ui_components(
+            window_width, window_height, obs_width, obs_height
+        )
+
         # Initialize optional architectural improvements
         self._initialize_architectural_systems()
-        
+
         # Finalize initialization
         self._finalize_initialization()
 
@@ -132,28 +149,20 @@ class UnifiedMiniWorldEnv(gym.Env):
         if not self.continuous:
             # Action enumeration for this environment
             self.actions = UnifiedMiniWorldEnv.Actions
-            
+
             # Actions are discrete integer values
             self.action_space = spaces.Discrete(len(self.actions))
         else:
             # Actions are continuous, speed and the difference of direction
-            self.action_space = spaces.Box(
-                low=-1,
-                high=1,
-                shape=(2,),
-                dtype=np.float32
-            )
+            self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
 
     def _setup_observation_space(self, obs_width, obs_height):
         """Setup observation space."""
         # Observations are RGB images with pixels in [0, 255]
         self.observation_space = spaces.Box(
-            low=0,
-            high=255,
-            shape=(obs_height, obs_width, 3),
-            dtype=np.uint8
+            low=0, high=255, shape=(obs_height, obs_width, 3), dtype=np.uint8
         )
-        
+
         self.reward_range = (-math.inf, math.inf)
 
     def _initialize_opengl_context(self):
@@ -168,7 +177,9 @@ class UnifiedMiniWorldEnv(gym.Env):
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_CULL_FACE)
 
-    def _setup_rendering_buffers(self, obs_width, obs_height, window_width, window_height):
+    def _setup_rendering_buffers(
+        self, obs_width, obs_height, window_width, window_height
+    ):
         """Setup frame buffers for rendering."""
         # Frame buffer used to render observations
         self.obs_fb = FrameBuffer(obs_width, obs_height, 8)
@@ -179,7 +190,9 @@ class UnifiedMiniWorldEnv(gym.Env):
         # Top-down frame buffer (created later when needed)
         self.topdown_fb = None
 
-    def _initialize_ui_components(self, window_width, window_height, obs_width, obs_height):
+    def _initialize_ui_components(
+        self, window_width, window_height, obs_width, obs_height
+    ):
         """Initialize UI components for human rendering."""
         # Compute the observation display size
         self.obs_disp_width = DEFAULT_DISPLAY_WIDTH
@@ -192,24 +205,24 @@ class UnifiedMiniWorldEnv(gym.Env):
             multiline=True,
             width=TEXT_LABEL_WIDTH,
             x=window_width + TEXT_MARGIN_X,
-            y=window_height - (self.obs_disp_height + TEXT_MARGIN_Y)
+            y=window_height - (self.obs_disp_height + TEXT_MARGIN_Y),
         )
 
     def _initialize_architectural_systems(self):
         """Initialize optional architectural improvements if available."""
         self.use_rendering_engine = False
         self.use_entity_manager = False
-        
+
         if ARCHITECTURAL_IMPROVEMENTS_AVAILABLE:
             # Initialize RenderingEngine (optional)
             try:
                 self.rendering_engine = RenderingEngine(self.obs_width, self.obs_height)
                 self.use_rendering_engine = True
-            except Exception as e:
+            except Exception:
                 # For debugging: print(f"RenderingEngine init failed: {e}")
                 self.rendering_engine = None
                 self.use_rendering_engine = False
-            
+
             # Initialize EntityManager (optional)
             try:
                 self.entity_manager = EntityManager()
@@ -239,7 +252,7 @@ class UnifiedMiniWorldEnv(gym.Env):
     def reset(self, seed=None, options=None, pos=None):
         """
         Reset the simulation at the start of a new episode.
-        
+
         This also randomizes many environment parameters (domain randomization).
         """
         # Handle seed for Gymnasium compatibility
@@ -251,14 +264,14 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         # Create the agent
         self.agent = Agent(mode=self.agent_mode)
-        
+
         # Set agent in EntityManager if available
         if self.use_entity_manager:
             self.entity_manager.set_agent(self.agent)
 
         # List of entities contained
         self.entities = []
-        
+
         # Separate lists for performance optimization
         self.static_entities = []
         self.dynamic_entities = []
@@ -277,18 +290,18 @@ class UnifiedMiniWorldEnv(gym.Env):
         rand = self.rand if self.domain_rand else None
 
         # Randomize elements of the world (domain randomization)
-        randomization_params = ['light_pos', 'light_color', 'light_ambient']
-        
+        randomization_params = ["light_pos", "light_color", "light_ambient"]
+
         # Add 'black' for custom environments, 'sky_color' for base environments
-        if hasattr(self, '_is_custom_env') and self._is_custom_env:
-            randomization_params.insert(0, 'black')
+        if hasattr(self, "_is_custom_env") and self._is_custom_env:
+            randomization_params.insert(0, "black")
         else:
-            randomization_params.insert(0, 'sky_color')
-            
+            randomization_params.insert(0, "sky_color")
+
         self.params.sample_many(rand, self, randomization_params)
 
         # Get the max forward step distance
-        self.max_forward_step = self.params.get_max('forward_step')
+        self.max_forward_step = self.params.get_max("forward_step")
 
         # Randomize parameters of the entities
         for ent in self.entities:
@@ -321,16 +334,16 @@ class UnifiedMiniWorldEnv(gym.Env):
 
     def _generate_observation(self, render_agent: bool = None):
         """Generate observation based on current observation level.
-        
+
         Args:
             render_agent: Whether to render the agent in the observation.
                          If None, uses default behavior based on observation level.
         """
         # Import ObservationLevel here to avoid circular imports
         from ..observation_types import ObservationLevel
-        
+
         if self.obs_level == ObservationLevel.TOP_DOWN_PARTIAL:
-            if self.agent_mode == 'empty':
+            if self.agent_mode == "empty":
                 # Agent mode 'empty' always renders without agent
                 render_ag = False
             elif render_agent is not None:
@@ -352,15 +365,17 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         else:
             valid_levels = list(ObservationLevel)
-            raise ValueError(f"Invalid obs_level {self.obs_level}. Must be one of {valid_levels}")
+            raise ValueError(
+                f"Invalid obs_level {self.obs_level}. Must be one of {valid_levels}"
+            )
 
     def get_observation(self, render_agent: bool = None):
         """Public method to generate observation with optional agent rendering control.
-        
+
         Args:
             render_agent: Whether to render the agent in the observation.
                          If None, uses default behavior based on observation level.
-                         
+
         Returns:
             np.ndarray: Generated observation image
         """
@@ -380,9 +395,9 @@ class UnifiedMiniWorldEnv(gym.Env):
     def move_agent(self, fwd_dist, fwd_drift):
         """Move the agent forward."""
         next_pos = (
-            self.agent.pos +
-            self.agent.dir_vec * fwd_dist +
-            self.agent.right_vec * fwd_drift
+            self.agent.pos
+            + self.agent.dir_vec * fwd_dist
+            + self.agent.right_vec * fwd_drift
         )
 
         if self.intersect(self.agent, next_pos, self.agent.radius):
@@ -390,7 +405,9 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         carrying = self.agent.carrying
         if carrying:
-            next_carrying_pos = self._calculate_carried_object_position(next_pos, carrying)
+            next_carrying_pos = self._calculate_carried_object_position(
+                next_pos, carrying
+            )
 
             if self.intersect(carrying, next_carrying_pos, carrying.radius):
                 return False
@@ -402,7 +419,7 @@ class UnifiedMiniWorldEnv(gym.Env):
 
     def turn_agent(self, turn_angle):
         """Turn the agent left or right."""
-        turn_angle *= (math.pi / 180)
+        turn_angle *= math.pi / 180
         orig_dir = self.agent.dir
 
         self.agent.dir += turn_angle
@@ -423,21 +440,21 @@ class UnifiedMiniWorldEnv(gym.Env):
             carrying.dir = self.agent.dir
 
         return True
-    
+
     def turn_and_move_agent(self, fwd_dist, turn_angle):
         """
         Simultaneously turn and move the agent in a single action.
-        
+
         This method is optimized for continuous control where the agent
         needs to change direction while moving forward.
-        
+
         Args:
             fwd_dist: Forward movement distance in environment units
             turn_angle: Turn angle in degrees (positive = clockwise)
-            
+
         Returns:
             bool: True if movement was successful, False if blocked by collision
-            
+
         Note:
             This method modifies agent.pos and agent.dir directly.
             Original direction is restored on collision.
@@ -445,38 +462,32 @@ class UnifiedMiniWorldEnv(gym.Env):
         orig_dir = self.agent.dir
         self.agent.dir += turn_angle * (math.pi / 180)
 
-        next_pos = (
-            self.agent.pos +
-            self.agent.dir_vec * fwd_dist
-        )
-        
+        next_pos = self.agent.pos + self.agent.dir_vec * fwd_dist
+
         if self.intersect(self.agent, next_pos, self.agent.radius):
             self.agent.dir = orig_dir
             return False
         else:
             self.agent.pos = next_pos
             return True
-    
+
     def pos_agent(self, fwd_dist, angle):
         """
         Position the agent at a specific distance and angle.
-        
+
         This method sets the agent's direction to the specified angle
         and moves forward by the specified distance.
-        
+
         Args:
             fwd_dist: Forward movement distance in environment units
             angle: Absolute angle in degrees (0 = facing positive Z)
-            
+
         Returns:
             bool: True if positioning was successful, False if blocked
         """
         self.agent.dir = angle * (math.pi / 180)
-        next_pos = (
-            self.agent.pos + 
-            self.agent.dir_vec * fwd_dist
-        )
-        
+        next_pos = self.agent.pos + self.agent.dir_vec * fwd_dist
+
         if self.intersect(self.agent, next_pos, self.agent.radius):
             return False
         else:
@@ -489,13 +500,13 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         # Process the action based on environment mode
         self._process_action(action)
-        
+
         # Generate observation
         observation = self._generate_observation()
-        
+
         # Calculate step results
         reward, terminated, info = self._calculate_step_results(observation)
-        
+
         return observation, reward, terminated, False, info
 
     def _process_action(self, action):
@@ -507,7 +518,7 @@ class UnifiedMiniWorldEnv(gym.Env):
 
     def _handle_continuous_action(self, action):
         """Handle continuous action processing."""
-        if self.agent.mode == 'circle':
+        if self.agent.mode == "circle":
             self.pos_agent(action[0], 180 * action[1])
         else:
             self.turn_and_move_agent(action[0], 15 * action[1])
@@ -515,28 +526,31 @@ class UnifiedMiniWorldEnv(gym.Env):
     def _handle_discrete_action(self, action):
         """Handle discrete action processing."""
         rand = self.rand if self.domain_rand else None
-        fwd_step = self.params.sample(rand, 'forward_step')
-        fwd_drift = self.params.sample(rand, 'forward_drift')
-        turn_step = self.params.sample(rand, 'turn_step')
-        
+        fwd_step = self.params.sample(rand, "forward_step")
+        fwd_drift = self.params.sample(rand, "forward_drift")
+        turn_step = self.params.sample(rand, "turn_step")
+
         if action == self.actions.move_forward:
             self.move_agent(fwd_step, fwd_drift)
-            
+
         elif action == self.actions.move_back:
             self.move_agent(-fwd_step, fwd_drift)
-        
+
         elif action == self.actions.turn_left:
             self.turn_agent(turn_step)
-        
+
         elif action == self.actions.turn_right:
             self.turn_agent(-turn_step)
-        
+
         # Pick up an object
         elif action == self.actions.pickup:
-            test_pos = (self.agent.pos + 
-                       self.agent.dir_vec * PICKUP_REACH_MULTIPLIER * self.agent.radius)
-            ent = self.intersect(self.agent, test_pos, 
-                               PICKUP_RADIUS_MULTIPLIER * self.agent.radius)
+            test_pos = (
+                self.agent.pos
+                + self.agent.dir_vec * PICKUP_REACH_MULTIPLIER * self.agent.radius
+            )
+            ent = self.intersect(
+                self.agent, test_pos, PICKUP_RADIUS_MULTIPLIER * self.agent.radius
+            )
             if not self.agent.carrying:
                 if isinstance(ent, Entity):
                     if not ent.is_static:
@@ -547,10 +561,12 @@ class UnifiedMiniWorldEnv(gym.Env):
             if self.agent.carrying:
                 self.agent.carrying.pos[1] = 0
                 self.agent.carrying = None
-        
+
         # Update carried object position
         if self.agent.carrying:
-            ent_pos = self._calculate_carried_object_position(self.agent.pos, self.agent.carrying)
+            ent_pos = self._calculate_carried_object_position(
+                self.agent.pos, self.agent.carrying
+            )
             self.agent.carrying.pos = ent_pos
             self.agent.carrying.dir = self.agent.dir
 
@@ -566,15 +582,15 @@ class UnifiedMiniWorldEnv(gym.Env):
             terminated = True
             reward = 0
             info = {
-                "pos": self.agent.pos, 
-                "mdp_view": topdown if topdown is not None else observation
+                "pos": self.agent.pos,
+                "mdp_view": topdown if topdown is not None else observation,
             }
         else:
             reward = 0
             terminated = False
             info = {
-                "pos": self.agent.pos, 
-                "mdp_view": topdown if topdown is not None else observation
+                "pos": self.agent.pos,
+                "mdp_view": topdown if topdown is not None else observation,
             }
 
         return reward, terminated, info
@@ -583,16 +599,18 @@ class UnifiedMiniWorldEnv(gym.Env):
         """Create a rectangular room."""
         # 2D outline coordinates of the room,
         # listed in counter-clockwise order when viewed from the top
-        outline = np.array([
-            # East wall
-            [max_x, max_z],
-            # North wall
-            [max_x, min_z],
-            # West wall
-            [min_x, min_z],
-            # South wall
-            [min_x, max_z],
-        ])
+        outline = np.array(
+            [
+                # East wall
+                [max_x, max_z],
+                # North wall
+                [max_x, min_z],
+                # West wall
+                [min_x, min_z],
+                # South wall
+                [min_x, max_z],
+            ]
+        )
 
         return self.add_room(outline=outline, **kwargs)
 
@@ -606,15 +624,18 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         return room
 
-    def connect_rooms(self, room_a, room_b, min_x=None, max_x=None, min_z=None, max_z=None, max_y=None):
+    def connect_rooms(
+        self, room_a, room_b, min_x=None, max_x=None, min_z=None, max_z=None, max_y=None
+    ):
         """Connect two rooms along facing edges."""
         edge_pair = self._find_facing_edges(room_a, room_b)
-        portal_coords = self._calculate_portal_coordinates(room_a, room_b, edge_pair, 
-                                                         min_x, max_x, min_z, max_z, max_y)
-        
+        portal_coords = self._calculate_portal_coordinates(
+            room_a, room_b, edge_pair, min_x, max_x, min_z, max_z, max_y
+        )
+
         if self._portals_directly_connected(portal_coords):
             return
-            
+
         connecting_room = self._create_connecting_room(portal_coords, room_a, max_y)
         self._add_portals_to_connecting_room(connecting_room, portal_coords)
 
@@ -640,29 +661,21 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         return None, None
 
-    def _calculate_portal_coordinates(self, room_a, room_b, edge_pair, min_x, max_x, min_z, max_z, max_y):
+    def _calculate_portal_coordinates(
+        self, room_a, room_b, edge_pair, min_x, max_x, min_z, max_z, max_y
+    ):
         """Extract portal coordinate calculations."""
         idx_a, idx_b = edge_pair
-        
+
         if idx_a is None:
             raise ValueError(f"No matching edges found between {room_a} and {room_b}")
 
         start_a, end_a = room_a.add_portal(
-            edge=idx_a,
-            min_x=min_x,
-            max_x=max_x,
-            min_z=min_z,
-            max_z=max_z,
-            max_y=max_y
+            edge=idx_a, min_x=min_x, max_x=max_x, min_z=min_z, max_z=max_z, max_y=max_y
         )
 
         start_b, end_b = room_b.add_portal(
-            edge=idx_b,
-            min_x=min_x,
-            max_x=max_x,
-            min_z=min_z,
-            max_z=max_z,
-            max_y=max_y
+            edge=idx_b, min_x=min_x, max_x=max_x, min_z=min_z, max_z=max_z, max_y=max_y
         )
 
         a = room_a.outline[idx_a] + room_a.edge_dirs[idx_a] * start_a
@@ -670,17 +683,33 @@ class UnifiedMiniWorldEnv(gym.Env):
         c = room_b.outline[idx_b] + room_b.edge_dirs[idx_b] * start_b
         d = room_b.outline[idx_b] + room_b.edge_dirs[idx_b] * end_b
 
-        return {'a': a, 'b': b, 'c': c, 'd': d, 'len_a': np.linalg.norm(b - a), 'len_b': np.linalg.norm(d - c)}
+        return {
+            "a": a,
+            "b": b,
+            "c": c,
+            "d": d,
+            "len_a": np.linalg.norm(b - a),
+            "len_b": np.linalg.norm(d - c),
+        }
 
     def _portals_directly_connected(self, portal_coords):
         """Check if portals are directly connected."""
-        return np.linalg.norm(portal_coords['a'] - portal_coords['d']) < PORTAL_CONNECTION_TOLERANCE
+        return (
+            np.linalg.norm(portal_coords["a"] - portal_coords["d"])
+            < PORTAL_CONNECTION_TOLERANCE
+        )
 
     def _create_connecting_room(self, portal_coords, room_a, max_y):
         """Create connecting room between portals."""
         # Room outline points must be specified in counter-clockwise order
-        outline = np.stack([portal_coords['c'], portal_coords['b'], 
-                           portal_coords['a'], portal_coords['d']])
+        outline = np.stack(
+            [
+                portal_coords["c"],
+                portal_coords["b"],
+                portal_coords["a"],
+                portal_coords["d"],
+            ]
+        )
         outline = np.stack([outline[:, 0], outline[:, 2]], axis=1)
 
         max_y = max_y if max_y is not None else room_a.wall_height
@@ -699,10 +728,20 @@ class UnifiedMiniWorldEnv(gym.Env):
 
     def _add_portals_to_connecting_room(self, connecting_room, portal_coords):
         """Add portals to the connecting room."""
-        connecting_room.add_portal(1, start_pos=0, end_pos=portal_coords['len_a'])
-        connecting_room.add_portal(3, start_pos=0, end_pos=portal_coords['len_b'])
+        connecting_room.add_portal(1, start_pos=0, end_pos=portal_coords["len_a"])
+        connecting_room.add_portal(3, start_pos=0, end_pos=portal_coords["len_b"])
 
-    def place_entity(self, ent, room=None, pos=None, dir=None, min_x=None, max_x=None, min_z=None, max_z=None):
+    def place_entity(
+        self,
+        ent,
+        room=None,
+        pos=None,
+        dir=None,
+        min_x=None,
+        max_x=None,
+        min_z=None,
+        max_z=None,
+    ):
         """
         Place an entity/object in the world.
         Find a position that doesn't intersect with any other object.
@@ -721,33 +760,35 @@ class UnifiedMiniWorldEnv(gym.Env):
             ent.dir = dir if dir is not None else self.rand.float(-math.pi, math.pi)
             ent.pos = pos
             self.entities.append(ent)
-            
+
             # Add to EntityManager if available
             if self.use_entity_manager:
                 self.entity_manager.add_entity(ent, pos)
-            
+
             # Add to appropriate performance list
             if ent.is_static:
                 self.static_entities.append(ent)
             else:
                 self.dynamic_entities.append(ent)
-                
+
             return ent
 
         # Keep retrying until we find a suitable position
         while True:
             # Pick a room, sample rooms proportionally to floor surface area
-            selected_room = room if room else self.rand.choice(self.rooms, probs=self.room_probs)
+            selected_room = (
+                room if room else self.rand.choice(self.rooms, probs=self.room_probs)
+            )
 
             # Choose a random point within the square bounding box of the room
             low_x = selected_room.min_x if min_x is None else min_x
             high_x = selected_room.max_x if max_x is None else max_x
             low_z = selected_room.min_z if min_z is None else min_z
             high_z = selected_room.max_z if max_z is None else max_z
-            
+
             pos = self.rand.float(
                 low=[low_x + ent.radius, 0, low_z + ent.radius],
-                high=[high_x - ent.radius, 0, high_z - ent.radius]
+                high=[high_x - ent.radius, 0, high_z - ent.radius],
             )
 
             # Make sure the position is within the room's outline
@@ -767,11 +808,11 @@ class UnifiedMiniWorldEnv(gym.Env):
             break
 
         self.entities.append(ent)
-        
+
         # Add to EntityManager if available
         if self.use_entity_manager:
             self.entity_manager.add_entity(ent, ent.pos)
-        
+
         # Add to appropriate performance list
         if ent.is_static:
             self.static_entities.append(ent)
@@ -780,7 +821,16 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         return ent
 
-    def place_agent(self, room=None, pos=None, dir=None, min_x=None, max_x=None, min_z=None, max_z=None):
+    def place_agent(
+        self,
+        room=None,
+        pos=None,
+        dir=None,
+        min_x=None,
+        max_x=None,
+        min_z=None,
+        max_z=None,
+    ):
         """
         Place the agent in the environment at a random position and orientation.
         """
@@ -792,7 +842,7 @@ class UnifiedMiniWorldEnv(gym.Env):
             min_x=min_x,
             max_x=max_x,
             min_z=min_z,
-            max_z=max_z
+            max_z=max_z,
         )
 
     def intersect(self, ent, pos, radius):
@@ -813,13 +863,13 @@ class UnifiedMiniWorldEnv(gym.Env):
 
             other_x, _, other_z = other_entity.pos
             other_pos = np.array([other_x, 0, other_z])
-            
+
             distance = 0
-            if (ent.trable or other_entity.trable):
+            if ent.trable or other_entity.trable:
                 distance = 10000000
             else:
                 distance = np.linalg.norm(other_pos - pos)
-                
+
             if distance < radius + other_entity.radius:
                 return other_entity
 
@@ -834,23 +884,23 @@ class UnifiedMiniWorldEnv(gym.Env):
             ent1 = self.agent
 
         distance = np.linalg.norm(ent0.pos - ent1.pos)
-        threshold = (ent0.radius + ent1.radius + 
-                    INTERACTION_DISTANCE_MULTIPLIER * self.max_forward_step)
+        threshold = (
+            ent0.radius
+            + ent1.radius
+            + INTERACTION_DISTANCE_MULTIPLIER * self.max_forward_step
+        )
         return distance < threshold
 
     def _load_tex(self, tex_name):
         """Load a texture, with or without domain randomization."""
-        rand = self.rand if self.params.sample(self.rand, 'tex_rand') else None
+        rand = self.rand if self.params.sample(self.rand, "tex_rand") else None
         return Texture.get(tex_name, rand)
 
     def _generate_collision_and_rendering_data(self):
         """Generate static data needed for rendering and collision detection."""
         # Generate the static data for each room
         for room in self.rooms:
-            room._gen_static_data(
-                self.params,
-                self.rand if self.domain_rand else None
-            )
+            room._gen_static_data(self.params, self.rand if self.domain_rand else None)
 
         # Concatenate the wall segments
         self.wall_segs = np.concatenate([r.wall_segs for r in self.rooms])
@@ -878,13 +928,13 @@ class UnifiedMiniWorldEnv(gym.Env):
         glNewList(1, GL_COMPILE)
 
         # Light position
-        glLightfv(GL_LIGHT0, GL_POSITION, (GLfloat*4)(*self.light_pos + [1]))
+        glLightfv(GL_LIGHT0, GL_POSITION, (GLfloat * 4)(*self.light_pos + [1]))
 
         # Background/minimum light level
-        glLightfv(GL_LIGHT0, GL_AMBIENT, (GLfloat*4)(*self.light_ambient))
+        glLightfv(GL_LIGHT0, GL_AMBIENT, (GLfloat * 4)(*self.light_ambient))
 
         # Diffuse light color
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, (GLfloat*4)(*self.light_color))
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, (GLfloat * 4)(*self.light_color))
 
         glEnable(GL_LIGHTING)
         glEnable(GL_LIGHT0)
@@ -918,10 +968,14 @@ class UnifiedMiniWorldEnv(gym.Env):
                 # Frustum culling for POMDP mode (skip entities outside view bounds)
                 if view_bounds is not None:
                     min_x, max_x, min_z, max_z = view_bounds
-                    if (ent.pos[0] < min_x - ent.radius or ent.pos[0] > max_x + ent.radius or
-                        ent.pos[2] < min_z - ent.radius or ent.pos[2] > max_z + ent.radius):
+                    if (
+                        ent.pos[0] < min_x - ent.radius
+                        or ent.pos[0] > max_x + ent.radius
+                        or ent.pos[2] < min_z - ent.radius
+                        or ent.pos[2] > max_z + ent.radius
+                    ):
                         continue
-                
+
                 ent.render()
 
         if render_agent:
@@ -935,17 +989,17 @@ class UnifiedMiniWorldEnv(gym.Env):
         """Render a top view of the whole map (from above)."""
         if not isinstance(POMDP, bool):
             raise TypeError(f"POMDP parameter must be boolean, got {type(POMDP)}")
-        
+
         frame_buffer = frame_buffer or self.obs_fb
-        
+
         self._prepare_top_view_rendering(frame_buffer)
         scene_extents = self._calculate_scene_extents(POMDP)
         self._setup_top_view_camera(scene_extents, frame_buffer)
-        
+
         return self._render_world(
             frame_buffer,
             render_agent=render_ag,
-            view_bounds=scene_extents if POMDP else None
+            view_bounds=scene_extents if POMDP else None,
         )
 
     def _prepare_top_view_rendering(self, frame_buffer):
@@ -959,7 +1013,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         frame_buffer.bind()
 
         # Clear the color and depth buffers
-        background_color = self.black if hasattr(self, 'black') else self.sky_color
+        background_color = self.black if hasattr(self, "black") else self.sky_color
         glClearColor(*background_color, 1.0)
         glClearDepth(1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -969,6 +1023,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         if POMDP:
             # Import constants for POMDP view radius
             from ..constants import POMDP_VIEW_RADIUS
+
             agent_x, _, agent_z = self.agent.pos
             min_x = agent_x - POMDP_VIEW_RADIUS
             max_x = agent_x + POMDP_VIEW_RADIUS
@@ -985,7 +1040,7 @@ class UnifiedMiniWorldEnv(gym.Env):
     def _setup_top_view_camera(self, scene_extents, frame_buffer):
         """Setup camera for top view rendering."""
         min_x, max_x, min_z, max_z = scene_extents
-        
+
         width = max_x - min_x
         height = max_z - min_z
         aspect = width / height
@@ -1013,8 +1068,8 @@ class UnifiedMiniWorldEnv(gym.Env):
             max_x,
             -max_z,
             -min_z,
-            -ORTHOGRAPHIC_DEPTH_RANGE, 
-            ORTHOGRAPHIC_DEPTH_RANGE
+            -ORTHOGRAPHIC_DEPTH_RANGE,
+            ORTHOGRAPHIC_DEPTH_RANGE,
         )
 
         # Setup the camera
@@ -1022,10 +1077,22 @@ class UnifiedMiniWorldEnv(gym.Env):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         m = [
-            1, 0, 0, 0,
-            0, 0, 1, 0,
-            0, -1, 0, 0,
-            0, 0, 0, 1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
         ]
         glLoadMatrixf((GLfloat * len(m))(*m))
 
@@ -1044,7 +1111,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         frame_buffer.bind()
 
         # Clear the color and depth buffers
-        background_color = self.black if hasattr(self, 'black') else self.sky_color
+        background_color = self.black if hasattr(self, "black") else self.sky_color
         glClearColor(*background_color, 1.0)
         glClearDepth(1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -1056,7 +1123,7 @@ class UnifiedMiniWorldEnv(gym.Env):
             self.agent.cam_fov_y,
             frame_buffer.width / float(frame_buffer.height),
             NEAR_CLIPPING_PLANE,
-            FAR_CLIPPING_PLANE
+            FAR_CLIPPING_PLANE,
         )
 
         # Setup the camera
@@ -1068,7 +1135,9 @@ class UnifiedMiniWorldEnv(gym.Env):
             # Target
             *(self.agent.cam_pos + self.agent.cam_dir),
             # Up vector
-            0, 1.0, 0.0
+            0,
+            1.0,
+            0.0,
         )
 
         return self._render_world(frame_buffer, render_agent=False)
@@ -1090,7 +1159,7 @@ class UnifiedMiniWorldEnv(gym.Env):
     def get_visible_ents(self):
         """
         Get entities visible to agent using occlusion queries.
-        
+
         Returns:
             set: Set of Entity objects that are visible to the agent
         """
@@ -1108,7 +1177,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         frame_buffer.bind()
 
         # Clear the color and depth buffers
-        background_color = self.black if hasattr(self, 'black') else self.sky_color
+        background_color = self.black if hasattr(self, "black") else self.sky_color
         glClearColor(*background_color, 1.0)
         glClearDepth(1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -1120,7 +1189,7 @@ class UnifiedMiniWorldEnv(gym.Env):
             self.agent.cam_fov_y,
             frame_buffer.width / float(frame_buffer.height),
             NEAR_CLIPPING_PLANE,
-            FAR_CLIPPING_PLANE
+            FAR_CLIPPING_PLANE,
         )
 
         # Setup the camera
@@ -1132,7 +1201,9 @@ class UnifiedMiniWorldEnv(gym.Env):
             # Target
             *(self.agent.cam_pos + self.agent.cam_dir),
             # Up vector
-            0, 1.0, 0.0
+            0,
+            1.0,
+            0.0,
         )
 
         # Render the rooms, without texturing
@@ -1143,10 +1214,10 @@ class UnifiedMiniWorldEnv(gym.Env):
     def _perform_occlusion_queries(self, query_manager: OcclusionQueryManager):
         """
         Perform occlusion queries on all entities.
-        
+
         Args:
             query_manager: Initialized occlusion query manager
-            
+
         Returns:
             set: Set of visible entities
         """
@@ -1156,7 +1227,7 @@ class UnifiedMiniWorldEnv(gym.Env):
                 continue
 
             query_manager.begin_query(entity_index)
-            
+
             # Draw a small box at the entity's position for occlusion testing
             pos = entity.pos
             drawBox(
@@ -1165,24 +1236,24 @@ class UnifiedMiniWorldEnv(gym.Env):
                 y_min=pos[1],
                 y_max=pos[1] + OCCLUSION_QUERY_BOX_HEIGHT,
                 z_min=pos[2] - OCCLUSION_QUERY_BOX_SIZE,
-                z_max=pos[2] + OCCLUSION_QUERY_BOX_SIZE
+                z_max=pos[2] + OCCLUSION_QUERY_BOX_SIZE,
             )
-            
+
             query_manager.end_query()
 
         # Get results using the query manager
         return query_manager.get_visible_entities(self.agent)
 
-    def render(self, mode='human', close=False, view='agent'):
+    def render(self, mode="human", close=False, view="agent"):
         """Render the environment for human viewing."""
         if close:
             return self._close_rendering()
-        
+
         rendered_image = self._render_scene(view)
-        
-        if mode == 'rgb_array':
+
+        if mode == "rgb_array":
             return rendered_image
-        
+
         return self._display_human_view(rendered_image, mode)
 
     def _close_rendering(self):
@@ -1193,14 +1264,14 @@ class UnifiedMiniWorldEnv(gym.Env):
     def _render_scene(self, view):
         """Handle core scene rendering logic."""
         # Render the human-view image
-        if view not in ['agent', 'top']:
+        if view not in ["agent", "top"]:
             raise ValueError(f"Invalid view '{view}'. Must be 'agent' or 'top'")
-        if view == 'agent':
+        if view == "agent":
             img = self.render_obs(self.vis_fb)
         else:
             # Import ObservationLevel here to avoid circular imports
             from ..observation_types import ObservationLevel
-            
+
             if self.obs_level == ObservationLevel.TOP_DOWN_PARTIAL:
                 img = self.render_top_view(self.vis_fb, POMDP=True)
             else:
@@ -1224,10 +1295,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         if self.window is None:
             config = pyglet.gl.Config(double_buffer=True)
             self.window = pyglet.window.Window(
-                width=window_width,
-                height=window_height,
-                resizable=False,
-                config=config
+                width=window_width, height=window_height, resizable=False, config=config
             )
 
         self.window.clear()
@@ -1253,7 +1321,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         img_data = pyglet.image.ImageData(
             img_width,
             img_height,
-            'RGB',
+            "RGB",
             img_flip.ctypes.data_as(POINTER(GLubyte)),
             pitch=img_width * 3,
         )
@@ -1264,7 +1332,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         obs_data = pyglet.image.ImageData(
             obs_width,
             obs_height,
-            'RGB',
+            "RGB",
             obs.ctypes.data_as(POINTER(GLubyte)),
             pitch=obs_width * 3,
         )
@@ -1273,14 +1341,14 @@ class UnifiedMiniWorldEnv(gym.Env):
             img_height - self.obs_disp_height,
             0,
             width=self.obs_disp_width,
-            height=self.obs_disp_height
+            height=self.obs_disp_height,
         )
 
         # Draw the text label in the window
         self.text_label.text = "pos: (%.2f, %.2f, %.2f)\nangle: %d\nsteps: %d" % (
             *self.agent.pos,
             int(self.agent.dir * 180 / math.pi) % 360,
-            self.step_count
+            self.step_count,
         )
         self.text_label.draw()
 
@@ -1289,7 +1357,7 @@ class UnifiedMiniWorldEnv(gym.Env):
 
         # If we are not running the Pyglet event loop,
         # we have to manually flip the buffers and dispatch events
-        if mode == 'human':
+        if mode == "human":
             self.window.flip()
             self.window.dispatch_events()
 

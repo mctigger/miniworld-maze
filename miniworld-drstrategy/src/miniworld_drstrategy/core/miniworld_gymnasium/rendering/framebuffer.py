@@ -1,21 +1,21 @@
 """Frame buffer management for MiniWorld environments."""
 
+from ctypes import POINTER, byref
+
 import numpy as np
-import pyglet
 from pyglet.gl import *
-from ctypes import byref, POINTER
 
 # Mapping of frame buffer error enums to strings
 FB_ERROR_ENUMS = {
-    GL_FRAMEBUFFER_UNDEFINED: 'GL_FRAMEBUFFER_UNDEFINED',
-    GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: 'GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT',
-    GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: 'GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
-    GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER: 'GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER',
-    GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER: 'GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER',
-    GL_FRAMEBUFFER_UNSUPPORTED: 'GL_FRAMEBUFFER_UNSUPPORTED',
-    GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE: 'GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE',
-    GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE: 'GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE',
-    GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS: 'GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS',
+    GL_FRAMEBUFFER_UNDEFINED: "GL_FRAMEBUFFER_UNDEFINED",
+    GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT",
+    GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT",
+    GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER: "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER",
+    GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER: "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER",
+    GL_FRAMEBUFFER_UNSUPPORTED: "GL_FRAMEBUFFER_UNSUPPORTED",
+    GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE: "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE",
+    GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE: "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE",
+    GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS: "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS",
 }
 
 
@@ -43,7 +43,7 @@ class FrameBuffer:
         # support multisampling on frame buffer objects
         try:
             # Ensure that the correct extension is supported
-            assert gl_info.have_extension('GL_EXT_framebuffer_multisample')
+            assert gl_info.have_extension("GL_EXT_framebuffer_multisample")
 
             # Get the maximum number of samples supported
             MAX_SAMPLES_EXT = 0x8D57
@@ -52,64 +52,51 @@ class FrameBuffer:
             max_samples = max_samples.value
 
             if num_samples > max_samples:
-                print('Falling back to num_samples={}'.format(max_samples))
+                print("Falling back to num_samples={}".format(max_samples))
                 num_samples = max_samples
 
             # Create a multisampled texture to render into
             fbTex = GLuint(0)
-            glGenTextures( 1, byref(fbTex))
+            glGenTextures(1, byref(fbTex))
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fbTex)
             glTexImage2DMultisample(
-                GL_TEXTURE_2D_MULTISAMPLE,
-                num_samples,
-                GL_RGBA32F,
-                width,
-                height,
-                True
+                GL_TEXTURE_2D_MULTISAMPLE, num_samples, GL_RGBA32F, width, height, True
             )
             glFramebufferTexture2D(
                 GL_FRAMEBUFFER,
                 GL_COLOR_ATTACHMENT0,
                 GL_TEXTURE_2D_MULTISAMPLE,
                 fbTex,
-                0
+                0,
             )
 
             # Attach a multisampled depth buffer to the FBO
             depth_rb = GLuint(0)
             glGenRenderbuffers(1, byref(depth_rb))
             glBindRenderbuffer(GL_RENDERBUFFER, depth_rb)
-            glRenderbufferStorageMultisample(GL_RENDERBUFFER, num_samples, GL_DEPTH_COMPONENT16, width, height)
-            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb)
+            glRenderbufferStorageMultisample(
+                GL_RENDERBUFFER, num_samples, GL_DEPTH_COMPONENT16, width, height
+            )
+            glFramebufferRenderbuffer(
+                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb
+            )
 
             # Check that the frame buffer creation succeeded
             res = glCheckFramebufferStatus(GL_FRAMEBUFFER)
             assert res == GL_FRAMEBUFFER_COMPLETE, FB_ERROR_ENUMS.get(res, res)
 
         except:
-            print('Falling back to non-multisampled frame buffer')
+            print("Falling back to non-multisampled frame buffer")
 
             # Create a plain texture texture to render into
             fbTex = GLuint(0)
-            glGenTextures( 1, byref(fbTex))
+            glGenTextures(1, byref(fbTex))
             glBindTexture(GL_TEXTURE_2D, fbTex)
             glTexImage2D(
-                GL_TEXTURE_2D,
-                0,
-                GL_RGBA,
-                width,
-                height,
-                0,
-                GL_RGBA,
-                GL_FLOAT,
-                None
+                GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None
             )
             glFramebufferTexture2D(
-                GL_FRAMEBUFFER,
-                GL_COLOR_ATTACHMENT0,
-                GL_TEXTURE_2D,
-                fbTex,
-                0
+                GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbTex, 0
             )
 
             # Attach depth buffer to FBO
@@ -117,7 +104,9 @@ class FrameBuffer:
             glGenRenderbuffers(1, byref(depth_rb))
             glBindRenderbuffer(GL_RENDERBUFFER, depth_rb)
             glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height)
-            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb)
+            glFramebufferRenderbuffer(
+                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb
+            )
 
         # Sanity check
         res = glCheckFramebufferStatus(GL_FRAMEBUFFER)
@@ -133,22 +122,10 @@ class FrameBuffer:
         glGenTextures(1, byref(fbTex))
         glBindTexture(GL_TEXTURE_2D, fbTex)
         glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGBA,
-            width,
-            height,
-            0,
-            GL_RGBA,
-            GL_FLOAT,
-            None
+            GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None
         )
         glFramebufferTexture2D(
-            GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_2D,
-            fbTex,
-            0
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbTex, 0
         )
 
         # Create a depth buffer for the final frame buffer
@@ -156,7 +133,9 @@ class FrameBuffer:
         glGenRenderbuffers(1, byref(depth_rb))
         glBindRenderbuffer(GL_RENDERBUFFER, depth_rb)
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height)
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb)
+        glFramebufferRenderbuffer(
+            GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb
+        )
 
         # Sanity check
         res = glCheckFramebufferStatus(GL_FRAMEBUFFER)
@@ -191,22 +170,30 @@ class FrameBuffer:
         glBindFramebuffer(GL_READ_FRAMEBUFFER, self.multi_fbo)
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self.final_fbo)
         glBlitFramebuffer(
-            0, 0,
-            self.width, self.height,
-            0, 0,
-            self.width, self.height,
+            0,
+            0,
+            self.width,
+            self.height,
+            0,
+            0,
+            self.width,
+            self.height,
             GL_COLOR_BUFFER_BIT,
-            GL_LINEAR
+            GL_LINEAR,
         )
 
         # Resolve the depth component as well
         glBlitFramebuffer(
-            0, 0,
-            self.width, self.height,
-            0, 0,
-            self.width, self.height,
+            0,
+            0,
+            self.width,
+            self.height,
+            0,
+            0,
+            self.width,
+            self.height,
             GL_DEPTH_BUFFER_BIT,
-            GL_NEAREST
+            GL_NEAREST,
         )
 
         # Copy the frame buffer contents into a numpy array
@@ -220,7 +207,7 @@ class FrameBuffer:
             self.height,
             GL_RGB,
             GL_UNSIGNED_BYTE,
-            self.img_array.ctypes.data_as(POINTER(GLubyte))
+            self.img_array.ctypes.data_as(POINTER(GLubyte)),
         )
 
         # Unbind the frame buffer
@@ -252,7 +239,7 @@ class FrameBuffer:
             self.height,
             GL_DEPTH_COMPONENT,
             GL_UNSIGNED_SHORT,
-            depth_map.ctypes.data_as(POINTER(GLushort))
+            depth_map.ctypes.data_as(POINTER(GLushort)),
         )
 
         # Unbind the frame buffer
@@ -265,8 +252,8 @@ class FrameBuffer:
         depth_map = depth_map.astype(np.float32) / 65535
 
         # Convert to real-world z-distances
-        clip_z = (depth_map - 0.5) * 2.0;
-        world_z = -2*z_far*z_near/(clip_z*(z_far-z_near)-(z_far+z_near))
+        clip_z = (depth_map - 0.5) * 2.0
+        world_z = -2 * z_far * z_near / (clip_z * (z_far - z_near) - (z_far + z_near))
 
         depth_map = np.ascontiguousarray(world_z)
 

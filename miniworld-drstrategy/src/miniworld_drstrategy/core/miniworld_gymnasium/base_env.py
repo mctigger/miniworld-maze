@@ -7,7 +7,7 @@ from .unified_env import UnifiedMiniWorldEnv
 class MiniWorldEnv(UnifiedMiniWorldEnv):
     """
     Legacy base class for MiniWorld environments.
-    
+
     This class provides backward compatibility with the original MiniWorld
     environment interface while leveraging the unified implementation.
     """
@@ -20,11 +20,11 @@ class MiniWorldEnv(UnifiedMiniWorldEnv):
         window_width=800,
         window_height=600,
         params=DEFAULT_PARAMS,
-        domain_rand=False
+        domain_rand=False,
     ):
         """
         Initialize base MiniWorld environment.
-        
+
         Args:
             max_episode_steps: Maximum steps per episode
             obs_width: Observation width in pixels
@@ -36,17 +36,17 @@ class MiniWorldEnv(UnifiedMiniWorldEnv):
         """
         # Mark this as a base environment (not custom) for background color handling
         self._is_custom_env = False
-        
+
         # Initialize using unified base with base environment defaults
         super().__init__(
             obs_level=3,  # Default to FIRST_PERSON for base environments
             continuous=False,  # Base environments use discrete actions
-            agent_mode='circle',  # Default agent mode
+            agent_mode="circle",  # Default agent mode
             max_episode_steps=max_episode_steps,
             obs_width=obs_width,
             obs_height=obs_height,
             window_width=window_width,
             window_height=window_height,
             params=params,
-            domain_rand=domain_rand
+            domain_rand=domain_rand,
         )

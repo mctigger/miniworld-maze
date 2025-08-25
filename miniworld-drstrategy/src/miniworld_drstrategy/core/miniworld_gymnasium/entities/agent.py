@@ -1,16 +1,18 @@
 """Agent entity for MiniWorld environments."""
 
 import math
+
 import numpy as np
 from pyglet.gl import *
-from .base_entity import Entity
+
 from ..math import *
+from .base_entity import Entity
 
 
 class Agent(Entity):
     """The agent entity that represents the player/robot in the environment."""
-    
-    def __init__(self, mode='triangle'):
+
+    def __init__(self, mode="triangle"):
         super().__init__()
         self.mode = mode
         self.trable = False
@@ -26,7 +28,7 @@ class Agent(Entity):
         self.cam_fov_y = 60
 
         # Bounding cylinder size for the agent
-        if self.mode == 'circle':
+        if self.mode == "circle":
             self.radius = 0.5
         else:
             self.radius = 0.6
@@ -47,11 +49,11 @@ class Agent(Entity):
     @property
     def cam_dir(self):
         """Camera direction (lookat) vector
-        
+
         Note: this is useful even if just for slight domain
         randomization of camera angle
         """
-        rot_z = gen_rot_matrix(Z_VEC, self.cam_pitch * math.pi/180)
+        rot_z = gen_rot_matrix(Z_VEC, self.cam_pitch * math.pi / 180)
         rot_y = gen_rot_matrix(Y_VEC, self.dir)
 
         dir = np.dot(X_VEC, rot_z)
@@ -60,19 +62,24 @@ class Agent(Entity):
         return dir
 
     def randomize(self, params, rng):
-        params.sample_many(rng, self, [
-            'cam_height',
-            'cam_fwd_disp',
-            'cam_pitch',
-            'cam_fov_y',
-        ])
+        params.sample_many(
+            rng,
+            self,
+            [
+                "cam_height",
+                "cam_fwd_disp",
+                "cam_pitch",
+                "cam_fov_y",
+            ],
+        )
 
     def render(self):
         """Draw the agent"""
         # Note: this is currently only used in the top view
         # Eventually, we will want a proper 3D model
 
-        if self.mode == 'circle':
+        if self.mode == "circle":
+
             def draw_circle(pos, radius, num_segments):
                 glBegin(GL_LINE_STRIP)
                 glVertex3f(*pos)  # Center vertex
@@ -83,10 +90,11 @@ class Agent(Entity):
                     glVertex3f(*self.pos)
                     glVertex3f(x, 100.0, y)
                 glEnd()
+
             glColor3f(1, 0, 0)
             draw_circle(self.pos, self.radius, 1024)
 
-        elif self.mode == 'triangle':
+        elif self.mode == "triangle":
             p = self.pos + Y_VEC * 100
             dv = self.dir_vec * self.radius
             rv = self.right_vec * self.radius
@@ -101,7 +109,7 @@ class Agent(Entity):
             glVertex3f(*p2)
             glVertex3f(*p1)
             glEnd()
-        
+
         else:
             pass
 
