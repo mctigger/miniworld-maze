@@ -5,7 +5,6 @@ Demonstration of the new ObservationLevel Enum for better code readability.
 This example shows how to use the descriptive enum values instead of magic numbers.
 """
 
-import numpy as np
 from PIL import Image
 
 from miniworld_maze import ObservationLevel, create_nine_rooms_env

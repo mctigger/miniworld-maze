@@ -1,5 +1,6 @@
 """Factory for creating Nine Rooms environment variants."""
 
+from typing import List
 import gymnasium as gym
 import numpy as np
 
@@ -22,6 +23,7 @@ class NineRoomsEnvironmentWrapper(gym.Wrapper):
         room_size=FACTORY_ROOM_SIZE,
         door_size=FACTORY_DOOR_SIZE,
         agent_mode=None,
+        info_obs: List[ObservationLevel] = None,
     ):
         """
         Create a Nine Rooms environment variant.
@@ -34,6 +36,7 @@ class NineRoomsEnvironmentWrapper(gym.Wrapper):
             room_size: Size of each room in environment units
             door_size: Size of doors between rooms
             agent_mode: Agent rendering mode ('empty', 'circle', 'triangle', or None for default)
+            info_obs: List of observation levels to include in info dictionary
         """
         self.variant = variant
 
@@ -60,6 +63,7 @@ class NineRoomsEnvironmentWrapper(gym.Wrapper):
             obs_width=size,
             obs_height=size,
             agent_mode=agent_mode,
+            info_obs=info_obs,
         )
 
         # Apply wrappers - no resize needed since we render at target size

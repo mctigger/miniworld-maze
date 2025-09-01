@@ -3,6 +3,7 @@
 import math
 from ctypes import POINTER
 from enum import IntEnum
+from typing import List, Optional
 
 import gymnasium as gym
 import numpy as np
@@ -10,6 +11,7 @@ import pyglet
 from gymnasium import spaces
 from pyglet.gl import *
 
+from ..observation_types import ObservationLevel
 from .entities import *
 from .math import *
 from .objmesh import *
@@ -95,6 +97,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         window_height=DEFAULT_WINDOW_HEIGHT,
         params=DEFAULT_PARAMS,
         domain_rand=False,
+        info_obs: Optional[List[ObservationLevel]] = None,
     ):
         """
         Initialize unified MiniWorld environment.
@@ -110,6 +113,7 @@ class UnifiedMiniWorldEnv(gym.Env):
             window_height: Window height for human rendering
             params: Environment parameters for domain randomization
             domain_rand: Whether to enable domain randomization
+            info_obs: List of observation levels to include in info dictionary
         """
         # Store configuration
         self.obs_level = obs_level
@@ -118,6 +122,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         self.max_episode_steps = max_episode_steps
         self.params = params
         self.domain_rand = domain_rand
+        self.info_obs = info_obs
 
         # Setup action space
         self._setup_action_space()
@@ -329,8 +334,20 @@ class UnifiedMiniWorldEnv(gym.Env):
         # Generate the first camera image
         obs = self._generate_observation()
 
+        # Generate additional observations for info dictionary if specified
+        info = {}
+        if self.info_obs is not None:
+            for obs_level in self.info_obs:
+                # Temporarily change obs_level to generate the desired observation
+                original_obs_level = self.obs_level
+                self.obs_level = obs_level
+                info_obs = self._generate_observation()
+                self.obs_level = original_obs_level
+                # Use the observation level name as key
+                info[str(obs_level)] = info_obs
+
         # Return first observation with info dict for Gymnasium compatibility
-        return obs, {}
+        return obs, info
 
     def _generate_observation(self, render_agent: bool = None):
         """Generate observation based on current observation level.
@@ -368,18 +385,6 @@ class UnifiedMiniWorldEnv(gym.Env):
             raise ValueError(
                 f"Invalid obs_level {self.obs_level}. Must be one of {valid_levels}"
             )
-
-    def get_observation(self, render_agent: bool = None):
-        """Public method to generate observation with optional agent rendering control.
-
-        Args:
-            render_agent: Whether to render the agent in the observation.
-                         If None, uses default behavior based on observation level.
-
-        Returns:
-            np.ndarray: Generated observation image
-        """
-        return self._generate_observation(render_agent=render_agent)
 
     def _calculate_carried_object_position(self, agent_pos, ent):
         """Compute the position at which to place an object being carried."""
@@ -577,21 +582,37 @@ class UnifiedMiniWorldEnv(gym.Env):
         if self.obs_level != 2:  # Not TOP_DOWN_FULL
             topdown = self.render_top_view(POMDP=False, frame_buffer=self.topdown_fb)
 
+        # Generate additional observations for info dictionary if specified
+        info = {}
+        if self.info_obs is not None:
+            for obs_level in self.info_obs:
+                # Temporarily change obs_level to generate the desired observation
+                original_obs_level = self.obs_level
+                self.obs_level = obs_level
+                info_obs = self._generate_observation()
+                self.obs_level = original_obs_level
+                # Use the observation level name as key
+                info[str(obs_level)] = info_obs
+
         # Check termination
         if self.step_count >= self.max_episode_steps:
             terminated = True
             reward = 0
-            info = {
-                "pos": self.agent.pos,
-                "mdp_view": topdown if topdown is not None else observation,
-            }
+            info.update(
+                {
+                    "pos": self.agent.pos,
+                    "mdp_view": topdown if topdown is not None else observation,
+                }
+            )
         else:
             reward = 0
             terminated = False
-            info = {
-                "pos": self.agent.pos,
-                "mdp_view": topdown if topdown is not None else observation,
-            }
+            info.update(
+                {
+                    "pos": self.agent.pos,
+                    "mdp_view": topdown if topdown is not None else observation,
+                }
+            )
 
         return reward, terminated, info
 

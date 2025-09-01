@@ -40,7 +40,7 @@ class OpenCVLiveController:
         self,
         variant: str = "NineRooms",
         size: int = 256,
-        obs_level: ObservationLevel = ObservationLevel.FIRST_PERSON,
+        obs_level: ObservationLevel = ObservationLevel.TOP_DOWN_PARTIAL,
     ):
         """
         Initialize the OpenCV live controller.
@@ -57,6 +57,8 @@ class OpenCVLiveController:
         self.map_env = None  # Separate environment for top-down map
         self.current_obs = None
         self.current_map_obs = None
+        self.current_goal = None
+        self.current_info = None
         self.running = True
 
         # Available variants
@@ -84,7 +86,7 @@ class OpenCVLiveController:
         self.current_fps = 0
 
         # Display settings
-        self.display_width = 1200  # Wider to accommodate both views
+        self.display_width = 1800  # Wider to accommodate four views
         self.display_height = 600
         self.info_height = 100  # Reduced height for info text
         self.view_size = 400  # Size of each view panel
@@ -113,6 +115,7 @@ class OpenCVLiveController:
             size=self.size,
             obs_level=self.obs_level,
             agent_mode="triangle",  # Make agent visible for better demo
+            info_obs=[ObservationLevel.FIRST_PERSON],
         )
 
         # Create separate environment for top-down map
@@ -122,14 +125,19 @@ class OpenCVLiveController:
             obs_level=ObservationLevel.TOP_DOWN_FULL,
             # Always use full top-down for map
             agent_mode="triangle",  # Make agent visible in map view
+            info_obs=[ObservationLevel.FIRST_PERSON],
         )
 
         # Synchronize both environments to same initial state
         obs, info = self.env.reset(seed=42)
         map_obs, map_info = self.map_env.reset(seed=42)
 
+        # Store info for accessing additional observations
+        self.current_info = info
+
         # Extract observation array from dict
         self.current_obs = obs["observation"]
+        self.current_goal = obs["desired_goal"]
         self.current_map_obs = map_obs["observation"]
 
         self.current_variant = variant
@@ -163,6 +171,48 @@ class OpenCVLiveController:
             return obs_resized
         else:
             return self._create_placeholder("No Ego View")
+
+    def get_goal_view_display(self) -> Optional[np.ndarray]:
+        """
+        Get current goal observation formatted for OpenCV display.
+
+        Returns:
+            BGR image array for OpenCV or None if failed
+        """
+        if self.current_goal is not None:
+            # Already in HWC format
+            obs_hwc = self.current_goal
+
+            # Convert RGB to BGR for OpenCV
+            obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+
+            # Resize for display
+            obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+
+            return obs_resized
+        else:
+            return self._create_placeholder("No Goal View")
+
+    def get_first_person_view_display(self) -> Optional[np.ndarray]:
+        """
+        Get current first person observation from info formatted for OpenCV display.
+
+        Returns:
+            BGR image array for OpenCV or None if failed
+        """
+        if self.current_info is not None and "FIRST_PERSON" in self.current_info:
+            # Get first person observation from info
+            obs_hwc = self.current_info["FIRST_PERSON"]
+
+            # Convert RGB to BGR for OpenCV
+            obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+
+            # Resize for display
+            obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+
+            return obs_resized
+        else:
+            return self._create_placeholder("No First Person View")
 
     def get_map_view_display(self) -> Optional[np.ndarray]:
         """
@@ -318,18 +368,25 @@ class OpenCVLiveController:
 
         return placeholder
 
-    def create_dual_view_display(
-        self, ego_img: np.ndarray, map_img: np.ndarray
+    def create_quad_view_display(
+        self,
+        first_person_img: np.ndarray,
+        ego_img: np.ndarray,
+        map_img: np.ndarray,
+        goal_img: np.ndarray,
     ) -> np.ndarray:
         """
-        Create dual-view display with ego view and top-down map side by side.
+        Create quad-view display with first person view, ego view,
+        top-down map, and goal view.
 
         Args:
+            first_person_img: First person view image
             ego_img: Ego view image
             map_img: Top-down map image
+            goal_img: Goal view image
 
         Returns:
-            Combined image with both views and info panel
+            Combined image with four views and info panel
         """
         # Create main canvas
         combined_img = np.zeros(
@@ -337,10 +394,20 @@ class OpenCVLiveController:
         )
 
         # View positions
-        ego_x = 50
+        first_person_x = 50
+        first_person_y = 50
+        ego_x = first_person_x + self.view_size + 50
         ego_y = 50
         map_x = ego_x + self.view_size + 50
         map_y = 50
+        goal_x = map_x + self.view_size + 50
+        goal_y = 50
+
+        # Place first person view
+        combined_img[
+            first_person_y : first_person_y + self.view_size,
+            first_person_x : first_person_x + self.view_size,
+        ] = first_person_img
 
         # Place ego view
         combined_img[ego_y : ego_y + self.view_size, ego_x : ego_x + self.view_size] = (
@@ -352,11 +419,27 @@ class OpenCVLiveController:
             map_img
         )
 
+        # Place goal view
+        combined_img[
+            goal_y : goal_y + self.view_size, goal_x : goal_x + self.view_size
+        ] = goal_img
+
         # Add labels
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 0.7
         color = (255, 255, 255)
         thickness = 2
+
+        # First person view label
+        cv2.putText(
+            combined_img,
+            "First Person View",
+            (first_person_x, first_person_y - 10),
+            font,
+            font_scale,
+            color,
+            thickness,
+        )
 
         # Ego view label
         obs_level_name = (
@@ -385,9 +468,20 @@ class OpenCVLiveController:
             thickness,
         )
 
+        # Goal view label
+        cv2.putText(
+            combined_img,
+            "Goal View",
+            (goal_x, goal_y - 10),
+            font,
+            font_scale,
+            color,
+            thickness,
+        )
+
         # Add agent rendering info to legend
-        legend_x = map_x + self.view_size - 150
-        legend_y = map_y + 20
+        legend_x = goal_x + self.view_size - 150
+        legend_y = goal_y + 20
         legend_font_scale = 0.4
 
         # Legend text - agent is now rendered by the engine
@@ -468,8 +562,12 @@ class OpenCVLiveController:
                 obs, info = self.env.reset(seed=seed)
                 map_obs, map_info = self.map_env.reset(seed=seed)
 
+                # Store info for accessing additional observations
+                self.current_info = info
+
                 # Extract observation array from dict
                 self.current_obs = obs["observation"]
+                self.current_goal = obs["desired_goal"]
                 self.current_map_obs = map_obs["observation"]
                 self.step_count = 0
                 self.episode_count += 1
@@ -494,8 +592,12 @@ class OpenCVLiveController:
                 self.map_env.step(action)
             )
 
+            # Store info for accessing additional observations
+            self.current_info = info
+
             # Extract observation array from dict
             self.current_obs = obs["observation"]
+            self.current_goal = obs["desired_goal"]
             self.current_map_obs = map_obs["observation"]
             self.step_count += 1
 
@@ -521,8 +623,11 @@ class OpenCVLiveController:
                 seed = np.random.randint(0, 1000000)
                 obs, info = self.env.reset(seed=seed)
                 map_obs, map_info = self.map_env.reset(seed=seed)
+                # Store info for accessing additional observations
+                self.current_info = info
                 # Extract observation array from dict
                 self.current_obs = obs["observation"]
+                self.current_goal = obs["desired_goal"]
                 self.current_map_obs = map_obs["observation"]
                 self.step_count = 0
                 self.episode_count += 1
@@ -569,13 +674,23 @@ class OpenCVLiveController:
         print("✅ Window created successfully")
 
         while self.running:
-            # Get both views
+            # Get all views
             ego_img = self.get_ego_view_display()
             map_img = self.get_map_view_display()
+            goal_img = self.get_goal_view_display()
 
-            if ego_img is not None and map_img is not None:
-                # Create combined dual-view display
-                display_img = self.create_dual_view_display(ego_img, map_img)
+            if ego_img is not None and map_img is not None and goal_img is not None:
+                # Get first person view
+                first_person_img = self.get_first_person_view_display()
+
+                if first_person_img is not None:
+                    # Create combined quad-view display
+                    display_img = self.create_quad_view_display(
+                        first_person_img, ego_img, map_img, goal_img
+                    )
+                else:
+                    # Fallback to placeholder if first person view fails
+                    display_img = self._create_placeholder("Display Error")
 
                 # Show image
                 cv2.imshow(window_name, display_img)
@@ -617,15 +732,15 @@ def main():
     parser.add_argument(
         "--obs-level",
         choices=["FIRST_PERSON", "TOP_DOWN_PARTIAL", "TOP_DOWN_FULL"],
-        default="FIRST_PERSON",
-        help="Observation level (default: FIRST_PERSON)",
+        default="TOP_DOWN_PARTIAL",
+        help="Observation level (default: TOP_DOWN_PARTIAL)",
     )
 
     args = parser.parse_args()
 
     # Convert string to enum
     obs_level_map = {
-        "FIRST_PERSON": ObservationLevel.FIRST_PERSON,
+        "FIRST_PERSON": ObservationLevel.TOP_DOWN_PARTIAL,
         "TOP_DOWN_PARTIAL": ObservationLevel.TOP_DOWN_PARTIAL,
         "TOP_DOWN_FULL": ObservationLevel.TOP_DOWN_FULL,
     }
