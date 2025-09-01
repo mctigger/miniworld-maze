@@ -23,7 +23,7 @@ from miniworld_maze.core.constants import (
     MB_TO_BYTES,
     RGB_CHANNELS,
 )
-from miniworld_maze.environments.factory import create_nine_rooms_env
+from miniworld_maze.environments.factory import NineRoomsEnvironmentWrapper
 
 
 def benchmark_rendering_performance(
@@ -58,7 +58,7 @@ def benchmark_rendering_performance(
         print(f"\n🔍 Testing {size}x{size} observations...")
 
         # Create environment with specific observation size
-        env = create_nine_rooms_env(variant, size=size)
+        env = NineRoomsEnvironmentWrapper(variant, size=size)
 
         # Warmup phase
         print(f"   🔥 Warming up ({num_warmup} steps)...")

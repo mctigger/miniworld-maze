@@ -21,18 +21,44 @@ pip install miniworld-maze
 
 ### Basic Usage
 
+See `examples/basic_usage.py` for a complete working example:
+
 ```python
-from miniworld_maze import create_drstrategy_env
+#!/usr/bin/env python3
+"""
+Basic usage example for miniworld-maze environments.
 
-# Create environment
-env = create_drstrategy_env(variant="NineRooms", size=64)
-obs, info = env.reset()
+This is a minimal example showing how to create and interact with the environment.
+"""
 
-# Take actions
-action = env.action_space.sample()
-obs, reward, terminated, truncated, info = env.step(action)
+from miniworld_maze import NineRoomsEnvironmentWrapper
 
-env.close()
+
+def main():
+    # Create environment
+    env = NineRoomsEnvironmentWrapper(variant="NineRooms", size=64)
+    obs, info = env.reset()
+
+    # obs is a dictionary containing:
+    # - 'observation': (64, 64, 3) RGB image array
+    # - 'desired_goal': (64, 64, 3) RGB image of the goal state
+
+    # Take a few random actions
+    for step in range(10):
+        action = env.action_space.sample()
+        obs, reward, terminated, truncated, info = env.step(action)
+
+        print(f"Step {step + 1}: reward={reward:.3f}, terminated={terminated}")
+
+        if terminated or truncated:
+            obs, info = env.reset()
+
+    env.close()
+    print("Environment closed successfully!")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 ### Headless Environments
@@ -59,9 +85,98 @@ This configures the underlying pyglet library to use EGL rendering instead of X1
 
 ## Environment Variants
 
-- **NineRooms**: 3×3 grid layout
-- **SpiralNineRooms**: Spiral connection pattern  
-- **TwentyFiveRooms**: 5×5 grid layout
+### Available Environments
+
+The package provides three main environment variants, each with different room layouts and connection patterns:
+
+#### 1. NineRooms (3×3 Grid)
+```
+-------------
+| 0 | 1 | 2 |
+-------------
+| 3 | 4 | 5 |
+-------------
+| 6 | 7 | 8 |
+-------------
+```
+A standard 3×3 grid where adjacent rooms are connected. The agent can navigate between rooms through doorways, with connections forming a fully connected grid pattern.
+
+#### 2. SpiralNineRooms (3×3 Spiral Pattern)
+```
+-------------
+| 0 | 1 | 2 |
+-------------
+| 3 | 4 | 5 |
+-------------
+| 6 | 7 | 8 |
+-------------
+```
+Same room layout as NineRooms but with a spiral connection pattern. Only specific room pairs are connected, creating a more challenging navigation task with fewer available paths.
+
+#### 3. TwentyFiveRooms (5×5 Grid)
+```
+---------------------
+| 0 | 1 | 2 | 3 | 4 |
+---------------------
+| 5 | 6 | 7 | 8 | 9 |
+---------------------
+|10 |11 |12 |13 |14 |
+---------------------
+|15 |16 |17 |18 |19 |
+---------------------
+|20 |21 |22 |23 |24 |
+---------------------
+```
+A larger 5×5 grid environment with 25 rooms, providing more complex navigation challenges and longer episode lengths.
+
+### Observation Types
+
+Each environment supports three different observation modes:
+
+- **`TOP_DOWN_PARTIAL`** (default): Agent-centered partial top-down view with limited visibility range (POMDP)
+- **`TOP_DOWN_FULL`**: Complete top-down view showing the entire environment
+- **`FIRST_PERSON`**: 3D first-person perspective view from the agent's current position
+
+### Action Space
+
+- **Discrete Actions** (default): 7 discrete actions (turn left/right, move forward/backward, strafe left/right, no-op)
+- **Continuous Actions**: Continuous control with `continuous=True` parameter
+
+### Environment Configuration
+
+All environments can be customized with the following parameters:
+
+```python
+from miniworld_maze import NineRoomsEnvironmentWrapper
+from miniworld_maze.core import ObservationLevel
+
+env = NineRoomsEnvironmentWrapper(
+    variant="NineRooms",                    # "NineRooms", "SpiralNineRooms", "TwentyFiveRooms"
+    obs_level=ObservationLevel.TOP_DOWN_PARTIAL,  # Observation type
+    continuous=False,                       # Use continuous actions
+    size=64,                               # Observation image size (64x64)
+    room_size=5,                           # Size of each room in environment units
+    door_size=2,                           # Size of doors between rooms  
+    agent_mode="empty",                    # Agent rendering: "empty", "circle", "triangle"
+)
+```
+
+### Observation Format
+
+The environment returns observations in dictionary format:
+
+```python
+obs = {
+    'observation': np.ndarray,    # (64, 64, 3) RGB image of current view
+    'desired_goal': np.ndarray,   # (64, 64, 3) RGB image of goal location
+}
+```
+
+### Reward Structure
+
+- **Goal reaching**: Positive reward when agent reaches the goal location
+- **Step penalty**: Small negative reward per step to encourage efficiency
+- **Episode termination**: When goal is reached or maximum steps exceeded
 
 
 ## License

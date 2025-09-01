@@ -7,7 +7,7 @@ This example shows how to use the descriptive enum values instead of magic numbe
 
 from PIL import Image
 
-from miniworld_maze import ObservationLevel, create_nine_rooms_env
+from miniworld_maze import ObservationLevel, NineRoomsEnvironmentWrapper
 
 
 def main():
@@ -27,7 +27,7 @@ def main():
         print(f"\n🔍 Testing {obs_level.name}...")
 
         # Create environment with specific observation level
-        env = create_nine_rooms_env(
+        env = NineRoomsEnvironmentWrapper(
             variant="NineRooms",
             obs_level=obs_level,  # Using descriptive enum!
             size=64,

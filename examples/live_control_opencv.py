@@ -28,7 +28,7 @@ from typing import Optional
 import cv2
 import numpy as np
 
-from miniworld_maze import ObservationLevel, create_nine_rooms_env
+from miniworld_maze import ObservationLevel, NineRoomsEnvironmentWrapper
 
 OPENCV_AVAILABLE = True
 
@@ -110,7 +110,7 @@ class OpenCVLiveController:
         print(f"🔄 Creating {variant} environments...")
 
         # Create main environment (ego view)
-        self.env = create_nine_rooms_env(
+        self.env = NineRoomsEnvironmentWrapper(
             variant=variant,
             size=self.size,
             obs_level=self.obs_level,
@@ -119,7 +119,7 @@ class OpenCVLiveController:
         )
 
         # Create separate environment for top-down map
-        self.map_env = create_nine_rooms_env(
+        self.map_env = NineRoomsEnvironmentWrapper(
             variant=variant,
             size=self.size,
             obs_level=ObservationLevel.TOP_DOWN_FULL,

@@ -18,8 +18,6 @@ Main modules:
 from .core import ObservationLevel
 from .environments.factory import (
     NineRoomsEnvironmentWrapper,
-    create_drstrategy_env,
-    create_nine_rooms_env,
 )
 from .environments.nine_rooms import NineRooms
 from .environments.spiral_nine_rooms import SpiralNineRooms
@@ -27,8 +25,6 @@ from .environments.twenty_five_rooms import TwentyFiveRooms
 
 __version__ = "1.0.0"
 __all__ = [
-    "create_drstrategy_env",
-    "create_nine_rooms_env",  # deprecated but kept for backward compatibility
     "NineRoomsEnvironmentWrapper",
     "NineRooms",
     "SpiralNineRooms",

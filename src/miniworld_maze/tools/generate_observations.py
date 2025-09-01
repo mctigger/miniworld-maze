@@ -11,7 +11,7 @@ import numpy as np
 from PIL import Image
 
 from ..core import FrameBuffer
-from ..environments.factory import create_nine_rooms_env
+from ..environments.factory import NineRoomsEnvironmentWrapper
 
 
 def generate_observations(variant, output_dir=None, high_res_full_views=False):
@@ -22,7 +22,7 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
     os.makedirs(output_dir, exist_ok=True)
 
     # Create environment
-    env = create_nine_rooms_env(variant=variant, size=64)
+    env = NineRoomsEnvironmentWrapper(variant=variant, size=64)
 
     # Get base environment for direct render access
     base_env = getattr(env, "env", getattr(env, "_env", env))
