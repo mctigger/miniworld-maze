@@ -11,14 +11,15 @@ import argparse
 import time
 
 import numpy as np
-from miniworld_drstrategy.core.constants import (
+
+from miniworld_maze.core.constants import (
     DEFAULT_BENCHMARK_STEPS,
     DEFAULT_WARMUP_STEPS,
     FLOAT32_BYTES,
     MB_TO_BYTES,
     RGB_CHANNELS,
 )
-from miniworld_drstrategy.environments.factory import create_nine_rooms_env
+from miniworld_maze.environments.factory import create_nine_rooms_env
 
 
 def benchmark_rendering_performance(

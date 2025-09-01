@@ -2,6 +2,8 @@
 
 from typing import List, Optional, Tuple, Union
 
+import cv2
+import numpy as np
 from gymnasium import spaces
 
 from ..core import COLORS, Box, ObservationLevel
@@ -111,8 +113,20 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             **kwargs,
         )
 
+        # Store observation dimensions for rendering
+        self.obs_width = obs_width
+        self.obs_height = obs_height
+
         if not self.continuous:
             self.action_space = spaces.Discrete(self.actions.move_forward + 1)
+
+        # Store original observation space before updating
+        original_obs_space = self.observation_space
+
+        # Update observation space to include desired_goal
+        self.observation_space = spaces.Dict(
+            {"observation": original_obs_space, "desired_goal": original_obs_space}
+        )
 
     def _generate_world_layout(self, pos=None):
         rooms = []
@@ -201,4 +215,130 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
-        return obs, reward, terminated, truncated, info
+
+        # Check if goal is achieved (only if we have goal functionality)
+        if hasattr(self, "desired_goal") and self.is_goal_achieved():
+            terminated = True
+            reward = 1.0  # Positive reward for achieving goal
+
+        # Return observation as dict if we have desired_goal, else return regular obs
+        if hasattr(self, "desired_goal"):
+            obs_dict = {"observation": obs, "desired_goal": self.desired_goal}
+            return obs_dict, reward, terminated, truncated, info
+        else:
+            return obs, reward, terminated, truncated, info
+
+    def reset(self, seed=None, options=None, pos=None):
+        """
+        Reset the environment and generate a new goal.
+
+        Args:
+            seed: Random seed
+            options: Additional options
+            pos: Agent starting position
+
+        Returns:
+            tuple: (observation, info)
+        """
+        # Call parent reset
+        obs, info = super().reset(seed=seed, options=options, pos=pos)
+
+        # Generate goal if goal_positions is available
+        if hasattr(self, "goal_positions"):
+            self.desired_goal = self.get_goal()
+
+            # Return observation as dict with desired_goal
+            obs_dict = {"observation": obs, "desired_goal": self.desired_goal}
+            return obs_dict, info
+        else:
+            # Return regular observation if goal_positions not set yet
+            return obs, info
+
+    def get_goal(self, room_idx=None, goal_idx=None):
+        """
+        Generate a goal by randomly selecting a room and goal position.
+
+        Args:
+            room_idx: Specific room index to select (optional)
+            goal_idx: Specific goal index within room to select (optional)
+
+        Returns:
+            np.ndarray: Rendered goal image
+        """
+        if not hasattr(self, "goal_positions"):
+            raise AttributeError(
+                "goal_positions not initialized. Make sure to call super().__init__ after setting goal_positions in subclass."
+            )
+
+        # Select random room if not specified
+        if room_idx is None:
+            room_idx = np.random.randint(len(self.goal_positions))
+
+        # Select random goal within room if not specified
+        if goal_idx is None:
+            goal_idx = np.random.randint(len(self.goal_positions[room_idx]))
+
+        # Get goal position
+        goal_position = self.goal_positions[room_idx][goal_idx]
+        self._current_goal_position = goal_position
+        self._current_goal_room = room_idx
+        self._current_goal_idx = goal_idx
+
+        # Render goal image
+        goal_image = self.render_on_pos(goal_position)
+
+        return goal_image
+
+    def render_on_pos(self, pos):
+        """
+        Render observation from a specific position.
+
+        Args:
+            pos: Position to render from [x, y, z]
+
+        Returns:
+            np.ndarray: Rendered observation
+        """
+        # Store current agent position
+        current_pos = self.agent.pos.copy()
+
+        # Move agent to target position
+        self.place_agent(pos=pos)
+
+        # Render observation from this position
+        obs = self.render_top_view(POMDP=True, render_ag=False)
+
+        # Resize to match observation dimensions if needed
+        if obs.shape[:2] != (self.obs_height, self.obs_width):
+            obs = cv2.resize(
+                obs, (self.obs_width, self.obs_height), interpolation=cv2.INTER_AREA
+            )
+
+        # Restore agent position
+        self.place_agent(pos=current_pos)
+
+        return obs
+
+    def is_goal_achieved(self, pos=None, threshold=0.5):
+        """
+        Check if the agent has achieved the current goal.
+
+        Args:
+            pos: Agent position to check (uses current agent pos if None)
+            threshold: Distance threshold for goal achievement
+
+        Returns:
+            bool: True if goal is achieved
+        """
+        if pos is None:
+            pos = self.agent.pos
+
+        if not hasattr(self, "_current_goal_position"):
+            return False
+
+        # Convert to numpy arrays and calculate distance
+        pos_array = np.array(pos)
+        goal_array = np.array(self._current_goal_position)
+        distance = np.linalg.norm(pos_array - goal_array)
+
+        return bool(distance < threshold)

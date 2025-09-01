@@ -22,24 +22,15 @@ Features:
 
 import argparse
 import math
-import sys
 import time
 from typing import Optional
 
+import cv2
 import numpy as np
 
-try:
-    import cv2
+from miniworld_maze import ObservationLevel, create_nine_rooms_env
 
-    OPENCV_AVAILABLE = True
-except ImportError:
-    print(
-        "❌ opencv-python is required for live control. Install with: pip install opencv-python"
-    )
-    OPENCV_AVAILABLE = False
-    sys.exit(1)
-
-from miniworld_drstrategy import ObservationLevel, create_nine_rooms_env
+OPENCV_AVAILABLE = True
 
 
 class OpenCVLiveController:
@@ -108,52 +99,49 @@ class OpenCVLiveController:
         Returns:
             True if successful, False otherwise
         """
-        try:
-            # Close existing environments
-            if self.env:
-                self.env.close()
-            if self.map_env:
-                self.map_env.close()
+        # Close existing environments
+        if self.env:
+            self.env.close()
+        if self.map_env:
+            self.map_env.close()
 
-            print(f"🔄 Creating {variant} environments...")
+        print(f"🔄 Creating {variant} environments...")
 
-            # Create main environment (ego view)
-            self.env = create_nine_rooms_env(
-                variant=variant,
-                size=self.size,
-                obs_level=self.obs_level,
-                agent_mode="triangle",  # Make agent visible for better demo
-            )
+        # Create main environment (ego view)
+        self.env = create_nine_rooms_env(
+            variant=variant,
+            size=self.size,
+            obs_level=self.obs_level,
+            agent_mode="triangle",  # Make agent visible for better demo
+        )
 
-            # Create separate environment for top-down map
-            self.map_env = create_nine_rooms_env(
-                variant=variant,
-                size=self.size,
-                obs_level=ObservationLevel.TOP_DOWN_FULL,  # Always use full top-down for map
-                agent_mode="triangle",  # Make agent visible in map view
-            )
+        # Create separate environment for top-down map
+        self.map_env = create_nine_rooms_env(
+            variant=variant,
+            size=self.size,
+            obs_level=ObservationLevel.TOP_DOWN_FULL,
+            # Always use full top-down for map
+            agent_mode="triangle",  # Make agent visible in map view
+        )
 
-            # Synchronize both environments to same initial state
-            obs, info = self.env.reset(seed=42)
-            map_obs, map_info = self.map_env.reset(seed=42)
+        # Synchronize both environments to same initial state
+        obs, info = self.env.reset(seed=42)
+        map_obs, map_info = self.map_env.reset(seed=42)
 
-            self.current_obs = obs
-            self.current_map_obs = map_obs
+        # Extract observation array from dict
+        self.current_obs = obs["observation"]
+        self.current_map_obs = map_obs["observation"]
 
-            self.current_variant = variant
-            self.step_count = 0
-            self.episode_count += 1
+        self.current_variant = variant
+        self.step_count = 0
+        self.episode_count += 1
 
-            print(f"✅ {variant} environments ready!")
-            print(f"   Ego view shape: {obs.shape}")
-            print(f"   Map view shape: {map_obs.shape}")
-            print(f"   Action space: {self.env.action_space}")
+        print(f"✅ {variant} environments ready!")
+        print(f"   Ego view shape: {self.current_obs.shape}")
+        print(f"   Map view shape: {self.current_map_obs.shape}")
+        print(f"   Action space: {self.env.action_space}")
 
-            return True
-
-        except Exception as e:
-            print(f"❌ Failed to create {variant} environment: {e}")
-            return False
+        return True
 
     def get_ego_view_display(self) -> Optional[np.ndarray]:
         """
@@ -162,24 +150,19 @@ class OpenCVLiveController:
         Returns:
             BGR image array for OpenCV or None if failed
         """
-        try:
-            if self.current_obs is not None:
-                # Convert from CHW to HWC
-                obs_hwc = np.transpose(self.current_obs, (1, 2, 0))
+        if self.current_obs is not None:
+            # Already in HWC format
+            obs_hwc = self.current_obs
 
-                # Convert RGB to BGR for OpenCV
-                obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+            # Convert RGB to BGR for OpenCV
+            obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
 
-                # Resize for display
-                obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+            # Resize for display
+            obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
 
-                return obs_resized
-            else:
-                return self._create_placeholder("No Ego View")
-
-        except Exception as e:
-            print(f"⚠️  Ego view conversion failed: {e}")
-            return self._create_placeholder("Ego View Error")
+            return obs_resized
+        else:
+            return self._create_placeholder("No Ego View")
 
     def get_map_view_display(self) -> Optional[np.ndarray]:
         """
@@ -188,56 +171,45 @@ class OpenCVLiveController:
         Returns:
             BGR image array for OpenCV or None if failed
         """
-        try:
-            if self.map_env is not None:
-                # Get base environment to access the new get_observation method
-                base_env = self.map_env
-                while hasattr(base_env, "env") or hasattr(base_env, "_env"):
-                    if hasattr(base_env, "env"):
-                        base_env = base_env.env
-                    elif hasattr(base_env, "_env"):
-                        base_env = base_env._env
-                    else:
-                        break
-
-                # Use the new get_observation method with agent rendering enabled
-                if hasattr(base_env, "get_observation"):
-                    map_obs_with_agent = base_env.get_observation(render_agent=True)
-
-                    if map_obs_with_agent is not None:
-                        # get_observation returns HWC format, so use directly
-                        obs_hwc = map_obs_with_agent
-
-                        # Convert RGB to BGR for OpenCV
-                        obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
-
-                        # Resize for display
-                        obs_resized = cv2.resize(
-                            obs_bgr, (self.view_size, self.view_size)
-                        )
-
-                        return obs_resized
-                    else:
-                        return self._create_placeholder("No Map View")
+        if self.map_env is not None:
+            # Get base environment to access the new get_observation method
+            base_env = self.map_env
+            while hasattr(base_env, "env") or hasattr(base_env, "_env"):
+                if hasattr(base_env, "env"):
+                    base_env = base_env.env
+                elif hasattr(base_env, "_env"):
+                    base_env = base_env._env
                 else:
-                    # Fallback to current observation with manual overlay (CHW format)
-                    if self.current_map_obs is not None:
-                        obs_hwc = np.transpose(
-                            self.current_map_obs, (1, 2, 0)
-                        )  # CHW to HWC
-                        obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
-                        obs_resized = cv2.resize(
-                            obs_bgr, (self.view_size, self.view_size)
-                        )
-                        return self._add_agent_marker(obs_resized)
-                    else:
-                        return self._create_placeholder("No Map View")
-            else:
-                return self._create_placeholder("No Map View")
+                    break
 
-        except Exception as e:
-            print(f"⚠️  Map view conversion failed: {e}")
-            return self._create_placeholder("Map View Error")
+            # Use the new get_observation method with agent rendering enabled
+            if hasattr(base_env, "get_observation"):
+                map_obs_with_agent = base_env.get_observation(render_agent=True)
+
+                if map_obs_with_agent is not None:
+                    # get_observation returns HWC format, so use directly
+                    obs_hwc = map_obs_with_agent
+
+                    # Convert RGB to BGR for OpenCV
+                    obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+
+                    # Resize for display
+                    obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+
+                    return obs_resized
+                else:
+                    return self._create_placeholder("No Map View")
+            else:
+                # Fallback to current observation with manual overlay (HWC format)
+                if self.current_map_obs is not None:
+                    obs_hwc = self.current_map_obs  # Already in HWC format
+                    obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+                    obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+                    return self._add_agent_marker(obs_resized)
+                else:
+                    return self._create_placeholder("No Map View")
+        else:
+            return self._create_placeholder("No Map View")
 
     def _add_agent_marker(self, map_image: np.ndarray) -> np.ndarray:
         """
@@ -249,97 +221,82 @@ class OpenCVLiveController:
         Returns:
             Map image with agent marker
         """
-        try:
-            # Get access to the base environment to read agent position
-            base_env = self.map_env
-            while hasattr(base_env, "env") or hasattr(base_env, "_env"):
-                if hasattr(base_env, "env"):
-                    base_env = base_env.env
-                elif hasattr(base_env, "_env"):
-                    base_env = base_env._env
-                else:
-                    break
-
-            # Get agent position and orientation
-            if hasattr(base_env, "agent") and base_env.agent is not None:
-                agent_pos = base_env.agent.pos
-                agent_dir = base_env.agent.dir
-
-                # Convert world coordinates to pixel coordinates
-                # Environment bounds
-                env_min_x = base_env.min_x
-                env_max_x = base_env.max_x
-                env_min_z = base_env.min_z
-                env_max_z = base_env.max_z
-
-                # Convert agent position to pixel coordinates
-                pixel_x = int(
-                    (agent_pos[0] - env_min_x)
-                    / (env_max_x - env_min_x)
-                    * self.view_size
-                )
-                pixel_z = int(
-                    (agent_pos[2] - env_min_z)
-                    / (env_max_z - env_min_z)
-                    * self.view_size
-                )
-
-                # Clamp to image bounds
-                pixel_x = max(0, min(self.view_size - 1, pixel_x))
-                pixel_z = max(0, min(self.view_size - 1, pixel_z))
-
-                # Create a copy to avoid modifying the original
-                marked_image = map_image.copy()
-
-                # Draw agent position as a circle
-                agent_radius = max(5, self.view_size // 80)  # Scale with image size
-                cv2.circle(
-                    marked_image, (pixel_x, pixel_z), agent_radius, (0, 255, 255), -1
-                )  # Yellow filled circle
-                cv2.circle(
-                    marked_image, (pixel_x, pixel_z), agent_radius + 2, (0, 0, 0), 2
-                )  # Black outline
-
-                # Draw direction indicator (small arrow/line)
-                if agent_dir is not None:
-                    # Calculate direction vector
-                    dir_length = agent_radius + 8
-                    end_x = int(pixel_x + dir_length * math.cos(agent_dir))
-                    end_z = int(pixel_z + dir_length * math.sin(agent_dir))
-
-                    # Draw direction line
-                    cv2.line(
-                        marked_image, (pixel_x, pixel_z), (end_x, end_z), (0, 255, 0), 3
-                    )  # Green direction line
-
-                    # Draw small arrowhead
-                    arrow_size = 5
-                    arrow_angle = 0.5  # radians
-
-                    # Calculate arrowhead points
-                    left_x = int(end_x - arrow_size * math.cos(agent_dir - arrow_angle))
-                    left_z = int(end_z - arrow_size * math.sin(agent_dir - arrow_angle))
-                    right_x = int(
-                        end_x - arrow_size * math.cos(agent_dir + arrow_angle)
-                    )
-                    right_z = int(
-                        end_z - arrow_size * math.sin(agent_dir + arrow_angle)
-                    )
-
-                    # Draw arrowhead
-                    cv2.line(
-                        marked_image, (end_x, end_z), (left_x, left_z), (0, 255, 0), 2
-                    )
-                    cv2.line(
-                        marked_image, (end_x, end_z), (right_x, right_z), (0, 255, 0), 2
-                    )
-
-                return marked_image
+        # Get access to the base environment to read agent position
+        base_env = self.map_env
+        while hasattr(base_env, "env") or hasattr(base_env, "_env"):
+            if hasattr(base_env, "env"):
+                base_env = base_env.env
+            elif hasattr(base_env, "_env"):
+                base_env = base_env._env
             else:
-                return map_image
+                break
 
-        except Exception as e:
-            print(f"⚠️  Failed to add agent marker: {e}")
+        # Get agent position and orientation
+        if hasattr(base_env, "agent") and base_env.agent is not None:
+            agent_pos = base_env.agent.pos
+            agent_dir = base_env.agent.dir
+
+            # Convert world coordinates to pixel coordinates
+            # Environment bounds
+            env_min_x = base_env.min_x
+            env_max_x = base_env.max_x
+            env_min_z = base_env.min_z
+            env_max_z = base_env.max_z
+
+            # Convert agent position to pixel coordinates
+            pixel_x = int(
+                (agent_pos[0] - env_min_x) / (env_max_x - env_min_x) * self.view_size
+            )
+            pixel_z = int(
+                (agent_pos[2] - env_min_z) / (env_max_z - env_min_z) * self.view_size
+            )
+
+            # Clamp to image bounds
+            pixel_x = max(0, min(self.view_size - 1, pixel_x))
+            pixel_z = max(0, min(self.view_size - 1, pixel_z))
+
+            # Create a copy to avoid modifying the original
+            marked_image = map_image.copy()
+
+            # Draw agent position as a circle
+            agent_radius = max(5, self.view_size // 80)  # Scale with image size
+            cv2.circle(
+                marked_image, (pixel_x, pixel_z), agent_radius, (0, 255, 255), -1
+            )  # Yellow filled circle
+            cv2.circle(
+                marked_image, (pixel_x, pixel_z), agent_radius + 2, (0, 0, 0), 2
+            )  # Black outline
+
+            # Draw direction indicator (small arrow/line)
+            if agent_dir is not None:
+                # Calculate direction vector
+                dir_length = agent_radius + 8
+                end_x = int(pixel_x + dir_length * math.cos(agent_dir))
+                end_z = int(pixel_z + dir_length * math.sin(agent_dir))
+
+                # Draw direction line
+                cv2.line(
+                    marked_image, (pixel_x, pixel_z), (end_x, end_z), (0, 255, 0), 3
+                )  # Green direction line
+
+                # Draw small arrowhead
+                arrow_size = 5
+                arrow_angle = 0.5  # radians
+
+                # Calculate arrowhead points
+                left_x = int(end_x - arrow_size * math.cos(agent_dir - arrow_angle))
+                left_z = int(end_z - arrow_size * math.sin(agent_dir - arrow_angle))
+                right_x = int(end_x - arrow_size * math.cos(agent_dir + arrow_angle))
+                right_z = int(end_z - arrow_size * math.sin(agent_dir + arrow_angle))
+
+                # Draw arrowhead
+                cv2.line(marked_image, (end_x, end_z), (left_x, left_z), (0, 255, 0), 2)
+                cv2.line(
+                    marked_image, (end_x, end_z), (right_x, right_z), (0, 255, 0), 2
+                )
+
+            return marked_image
+        else:
             return map_image
 
     def _create_placeholder(self, text: str) -> np.ndarray:
@@ -460,7 +417,8 @@ class OpenCVLiveController:
         )
         cv2.putText(
             combined_img,
-            f"Episode: {self.episode_count} | Step: {self.step_count} | FPS: {self.current_fps}",
+            f"Episode: {self.episode_count} | Step: {self.step_count} | "
+            f"FPS: {self.current_fps}",
             (10, info_y + 25),
             font,
             font_scale,
@@ -472,7 +430,8 @@ class OpenCVLiveController:
         font_scale_small = 0.5
         controls_y = info_y + 55
         controls = [
-            "CONTROLS: W/A/S/D=Move/Turn, SPACE=Pickup, X=Drop, E=Toggle, R=Reset, 1/2/3=Switch Env, ESC/Q=Quit"
+            "CONTROLS: W/A/S/D=Move/Turn, SPACE=Pickup, X=Drop, E=Toggle, "
+            "R=Reset, 1/2/3=Switch Env, ESC/Q=Quit"
         ]
 
         for i, control in enumerate(controls):
@@ -498,84 +457,75 @@ class OpenCVLiveController:
         Returns:
             True to continue, False to quit
         """
-        try:
-            if key == 27 or key == ord("q"):  # ESC or Q
-                return False
+        if key == 27 or key == ord("q"):  # ESC or Q
+            return False
 
-            elif key == ord("r"):
-                # Reset both environments
-                if self.env and self.map_env:
-                    try:
-                        # Use same seed to keep environments synchronized
-                        seed = np.random.randint(0, 1000000)
-                        obs, info = self.env.reset(seed=seed)
-                        map_obs, map_info = self.map_env.reset(seed=seed)
+        elif key == ord("r"):
+            # Reset both environments
+            if self.env and self.map_env:
+                # Use same seed to keep environments synchronized
+                seed = np.random.randint(0, 1000000)
+                obs, info = self.env.reset(seed=seed)
+                map_obs, map_info = self.map_env.reset(seed=seed)
 
-                        self.current_obs = obs
-                        self.current_map_obs = map_obs
-                        self.step_count = 0
-                        self.episode_count += 1
-                        print(
-                            f"🔄 Both environments reset (Episode {self.episode_count})"
-                        )
-                    except Exception as e:
-                        print(f"❌ Reset failed: {e}")
+                # Extract observation array from dict
+                self.current_obs = obs["observation"]
+                self.current_map_obs = map_obs["observation"]
+                self.step_count = 0
+                self.episode_count += 1
+                print(f"🔄 Both environments reset (Episode {self.episode_count})")
 
-            elif key in [ord("1"), ord("2"), ord("3")]:
-                # Switch environment variant
-                variant_map = {ord("1"): 0, ord("2"): 1, ord("3"): 2}
-                new_index = variant_map[key]
-                if new_index < len(self.variants):
-                    new_variant = self.variants[new_index]
-                    print(f"🔄 Switching to {new_variant}...")
-                    if self.create_environment(new_variant):
-                        self.variant_index = new_index
+        elif key in [ord("1"), ord("2"), ord("3")]:
+            # Switch environment variant
+            variant_map = {ord("1"): 0, ord("2"): 1, ord("3"): 2}
+            new_index = variant_map[key]
+            if new_index < len(self.variants):
+                new_variant = self.variants[new_index]
+                print(f"🔄 Switching to {new_variant}...")
+                if self.create_environment(new_variant):
+                    self.variant_index = new_index
 
-            elif self.env and self.map_env and key in self.action_map:
-                # Execute action on both environments to keep them synchronized
-                action = self.action_map[key]
-                try:
-                    # Step both environments with the same action
-                    obs, reward, terminated, truncated, info = self.env.step(action)
-                    map_obs, map_reward, map_terminated, map_truncated, map_info = (
-                        self.map_env.step(action)
-                    )
+        elif self.env and self.map_env and key in self.action_map:
+            # Execute action on both environments to keep them synchronized
+            action = self.action_map[key]
+            # Step both environments with the same action
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            map_obs, map_reward, map_terminated, map_truncated, map_info = (
+                self.map_env.step(action)
+            )
 
-                    self.current_obs = obs
-                    self.current_map_obs = map_obs
-                    self.step_count += 1
+            # Extract observation array from dict
+            self.current_obs = obs["observation"]
+            self.current_map_obs = map_obs["observation"]
+            self.step_count += 1
 
-                    # Print action feedback
-                    action_names = [
-                        "turn_left",
-                        "turn_right",
-                        "move_forward",
-                        "move_back",
-                        "pickup",
-                        "drop",
-                        "toggle",
-                    ]
-                    if action < len(action_names):
-                        print(
-                            f"🎯 {action_names[action]} | Reward: {reward:.2f} | Step: {self.step_count}"
-                        )
+            # Print action feedback
+            action_names = [
+                "turn_left",
+                "turn_right",
+                "move_forward",
+                "move_back",
+                "pickup",
+                "drop",
+                "toggle",
+            ]
+            if action < len(action_names):
+                print(
+                    f"🎯 {action_names[action]} | Reward: {reward:.2f} | "
+                    f"Step: {self.step_count}"
+                )
 
-                    if terminated or truncated:
-                        print(f"🏁 Episode ended! Reward: {reward:.2f}")
-                        # Reset both environments with same seed
-                        seed = np.random.randint(0, 1000000)
-                        obs, info = self.env.reset(seed=seed)
-                        map_obs, map_info = self.map_env.reset(seed=seed)
-                        self.current_obs = obs
-                        self.current_map_obs = map_obs
-                        self.step_count = 0
-                        self.episode_count += 1
-
-                except Exception as e:
-                    print(f"❌ Action failed: {e}")
-
-        except Exception as e:
-            print(f"❌ Input handling error: {e}")
+            if terminated or truncated:
+                print(f"🏁 Episode ended! Reward: {reward:.2f}")
+                # Reset both environments with same seed
+                seed = np.random.randint(0, 1000000)
+                obs, info = self.env.reset(seed=seed)
+                map_obs, map_info = self.map_env.reset(seed=seed)
+                # Extract observation array from dict
+                self.current_obs = obs["observation"]
+                self.current_map_obs = map_obs["observation"]
+                self.step_count = 0
+                self.episode_count += 1
 
         return True
 
@@ -618,38 +568,33 @@ class OpenCVLiveController:
         cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
         print("✅ Window created successfully")
 
-        try:
-            while self.running:
-                # Get both views
-                ego_img = self.get_ego_view_display()
-                map_img = self.get_map_view_display()
+        while self.running:
+            # Get both views
+            ego_img = self.get_ego_view_display()
+            map_img = self.get_map_view_display()
 
-                if ego_img is not None and map_img is not None:
-                    # Create combined dual-view display
-                    display_img = self.create_dual_view_display(ego_img, map_img)
+            if ego_img is not None and map_img is not None:
+                # Create combined dual-view display
+                display_img = self.create_dual_view_display(ego_img, map_img)
 
-                    # Show image
-                    cv2.imshow(window_name, display_img)
+                # Show image
+                cv2.imshow(window_name, display_img)
 
-                # Handle input (1ms timeout for responsiveness)
-                key = cv2.waitKey(1) & 0xFF
-                if key != 255:  # Key was pressed
-                    if not self.handle_input(key):
-                        break
+            # Handle input (1ms timeout for responsiveness)
+            key = cv2.waitKey(1) & 0xFF
+            if key != 255:  # Key was pressed
+                if not self.handle_input(key):
+                    break
 
-                # Update FPS
-                self.update_fps()
+            # Update FPS
+            self.update_fps()
 
-        except KeyboardInterrupt:
-            print("\n🛑 Interrupted by user")
-
-        finally:
-            if self.env:
-                self.env.close()
-            if self.map_env:
-                self.map_env.close()
-            cv2.destroyAllWindows()
-            print("\n👋 OpenCV dual-view live controller stopped")
+        if self.env:
+            self.env.close()
+        if self.map_env:
+            self.map_env.close()
+        cv2.destroyAllWindows()
+        print("\n👋 OpenCV dual-view live controller stopped")
 
 
 def main():

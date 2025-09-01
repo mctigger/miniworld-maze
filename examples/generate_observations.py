@@ -8,11 +8,12 @@ import argparse
 import os
 
 import numpy as np
-from miniworld_drstrategy.core.miniworld_gymnasium.rendering.framebuffer import (
+from PIL import Image
+
+from miniworld_maze.core.miniworld_gymnasium.rendering.framebuffer import (
     FrameBuffer,
 )
-from miniworld_drstrategy.environments.factory import create_nine_rooms_env
-from PIL import Image
+from miniworld_maze.environments.factory import create_nine_rooms_env
 
 
 def generate_observations(variant, output_dir=None, high_res_full_views=False):
@@ -44,7 +45,6 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
         high_res_fb = FrameBuffer(512, 512, 8)
 
     # === FULL ENVIRONMENT OBSERVATIONS ===
-
     # 1. Full view with agent at starting position
     if high_res_full_views:
         full_view_start = base_env.render_top_view(
@@ -112,9 +112,10 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
 
     # Reset environment
     obs, _ = env.reset(seed=42)
+    obs = obs["observation"]
 
     # 1. Standard gymnasium observation
-    obs_hwc = np.transpose(obs, (1, 2, 0))
+    obs_hwc = obs
     Image.fromarray(obs_hwc).save(f"{output_dir}/gymnasium_standard.png")
 
     # 2. Observations after movement
@@ -123,7 +124,8 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
 
     for i, action in enumerate(actions):
         obs, _, _, _, _ = env.step(action)
-        obs_hwc = np.transpose(obs, (1, 2, 0))
+        obs = obs["observation"]
+        obs_hwc = obs
         Image.fromarray(obs_hwc).save(
             f"{output_dir}/gymnasium_step_{i + 1}_{action_names[i]}.png"
         )

@@ -68,3 +68,17 @@ class SpiralNineRooms(GridRoomsEnvironment):
             obs_height=obs_height,
             **kwargs,
         )
+
+        # Initialize goal positions for each room (2 goals per room)
+        self.goal_positions = []
+        for i in range(3):  # rows
+            for j in range(3):  # columns
+                center_x = room_size * j + room_size / 2
+                center_z = room_size * i + room_size / 2
+                # Two goals per room: center-left and center-right
+                self.goal_positions.append(
+                    [
+                        [center_x - 1.0, 0.0, center_z],  # left goal
+                        [center_x + 1.0, 0.0, center_z],  # right goal
+                    ]
+                )

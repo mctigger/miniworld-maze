@@ -5,7 +5,6 @@ import numpy as np
 
 from ..core import ObservationLevel
 from ..core.constants import FACTORY_DOOR_SIZE, FACTORY_ROOM_SIZE
-from ..wrappers.image_transforms import ImageToPyTorch
 from .nine_rooms import NineRooms
 from .spiral_nine_rooms import SpiralNineRooms
 from .twenty_five_rooms import TwentyFiveRooms
@@ -64,10 +63,9 @@ class NineRoomsEnvironmentWrapper(gym.Wrapper):
         )
 
         # Apply wrappers - no resize needed since we render at target size
-        env = ImageToPyTorch(base_env)
 
-        # Initialize gym.Wrapper with the wrapped environment
-        super().__init__(env)
+        # Initialize gym.Wrapper with the base environment
+        super().__init__(base_env)
 
     def render_on_pos(self, pos):
         """Render observation from a specific position."""

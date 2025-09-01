@@ -6,8 +6,9 @@ This example shows how to use the descriptive enum values instead of magic numbe
 """
 
 import numpy as np
-from miniworld_drstrategy import ObservationLevel, create_nine_rooms_env
 from PIL import Image
+
+from miniworld_maze import ObservationLevel, create_nine_rooms_env
 
 
 def main():
@@ -35,10 +36,11 @@ def main():
 
         # Reset and get observation
         obs, info = env.reset(seed=42)
-        print(f"   ✅ Observation shape: {obs.shape}")
+        obs_array = obs["observation"] if isinstance(obs, dict) else obs
+        print(f"   ✅ Observation shape: {obs_array.shape}")
 
-        # Save sample observation
-        obs_hwc = np.transpose(obs, (1, 2, 0))
+        # Save sample observation (already in HWC format)
+        obs_hwc = obs_array
         filename = f"obs_level_{obs_level.name.lower()}.png"
         Image.fromarray(obs_hwc).save(filename)
         print(f"   💾 Saved sample to: {filename}")
