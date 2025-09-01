@@ -1,6 +1,7 @@
 """Factory for creating Nine Rooms environment variants."""
 
 from typing import List
+
 import gymnasium as gym
 import numpy as np
 

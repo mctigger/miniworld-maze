@@ -19,11 +19,13 @@ pip install miniworld-maze
 
 ## Usage
 
+### Basic Usage
+
 ```python
-from miniworld_drstrategy import create_nine_rooms_env
+from miniworld_maze import create_drstrategy_env
 
 # Create environment
-env = create_nine_rooms_env(variant="NineRooms", size=64)
+env = create_drstrategy_env(variant="NineRooms", size=64)
 obs, info = env.reset()
 
 # Take actions
@@ -32,6 +34,28 @@ obs, reward, terminated, truncated, info = env.step(action)
 
 env.close()
 ```
+
+### Headless Environments
+
+When running in headless environments (servers, CI/CD, Docker containers) or when encountering X11/OpenGL context issues, you need to enable headless rendering:
+
+```bash
+# Set environment variable before running Python
+export PYGLET_HEADLESS=1
+python your_script.py
+```
+
+Or in your Python code (must be set before importing the library):
+
+```python
+import os
+os.environ['PYGLET_HEADLESS'] = '1'
+
+import miniworld_maze
+# ... rest of your code
+```
+
+This configures the underlying pyglet library to use EGL rendering instead of X11, allowing the environments to run without a display server.
 
 ## Environment Variants
 

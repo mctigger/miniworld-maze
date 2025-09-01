@@ -8,9 +8,13 @@ direct rendering approach vs the old resize-based approach.
 """
 
 import argparse
+import os
 import time
 
 import numpy as np
+
+# Enable headless rendering to avoid X11/OpenGL context issues
+os.environ["PYGLET_HEADLESS"] = "1"
 
 from miniworld_maze.core.constants import (
     DEFAULT_BENCHMARK_STEPS,
