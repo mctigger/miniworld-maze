@@ -16,6 +16,7 @@ def main():
     # obs is a dictionary containing:
     # - 'observation': (64, 64, 3) RGB image array
     # - 'desired_goal': (64, 64, 3) RGB image of the goal state
+    # - 'achieved_goal': (64, 64, 3) RGB image of the current state
 
     # Take a few random actions
     for step in range(10):

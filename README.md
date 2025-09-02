@@ -42,6 +42,7 @@ def main():
     # obs is a dictionary containing:
     # - 'observation': (64, 64, 3) RGB image array
     # - 'desired_goal': (64, 64, 3) RGB image of the goal state
+    # - 'achieved_goal': (64, 64, 3) RGB image of the current state
 
     # Take a few random actions
     for step in range(10):
@@ -169,6 +170,7 @@ The environment returns observations in dictionary format:
 obs = {
     'observation': np.ndarray,    # (64, 64, 3) RGB image of current view
     'desired_goal': np.ndarray,   # (64, 64, 3) RGB image of goal location
+    'achieved_goal': np.ndarray,  # (64, 64, 3) RGB image of current state
 }
 ```
 
