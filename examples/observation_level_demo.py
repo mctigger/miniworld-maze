@@ -7,7 +7,7 @@ This example shows how to use the descriptive enum values instead of magic numbe
 
 from PIL import Image
 
-from miniworld_maze import ObservationLevel, NineRoomsEnvironmentWrapper
+from miniworld_maze import NineRoomsEnvironmentWrapper, ObservationLevel
 
 
 def main():

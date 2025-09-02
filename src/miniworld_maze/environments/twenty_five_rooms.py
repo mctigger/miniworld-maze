@@ -106,10 +106,24 @@ class TwentyFiveRooms(GridRoomsEnvironment):
             "realblueberry",
         ]
 
+        # Initialize goal positions for each room (1 goal per room at center)
+        goal_positions = []
+        for i in range(5):  # rows
+            for j in range(5):  # columns
+                center_x = room_size * j + room_size / 2
+                center_z = room_size * i + room_size / 2
+                # One goal per room at the center
+                goal_positions.append(
+                    [
+                        [center_x, 0.0, center_z],
+                    ]
+                )
+
         super().__init__(
             grid_size=5,
             connections=connections or default_connections,
             textures=textures or default_textures,
+            goal_positions=goal_positions,
             placed_room=placed_room,
             obs_level=obs_level,
             continuous=continuous,
@@ -120,16 +134,3 @@ class TwentyFiveRooms(GridRoomsEnvironment):
             obs_height=obs_height,
             **kwargs,
         )
-
-        # Initialize goal positions for each room (1 goal per room at center)
-        self.goal_positions = []
-        for i in range(5):  # rows
-            for j in range(5):  # columns
-                center_x = room_size * j + room_size / 2
-                center_z = room_size * i + room_size / 2
-                # One goal per room at the center
-                self.goal_positions.append(
-                    [
-                        [center_x, 0.0, center_z],
-                    ]
-                )

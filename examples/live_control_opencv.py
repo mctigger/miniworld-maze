@@ -28,7 +28,7 @@ from typing import Optional
 import cv2
 import numpy as np
 
-from miniworld_maze import ObservationLevel, NineRoomsEnvironmentWrapper
+from miniworld_maze import NineRoomsEnvironmentWrapper, ObservationLevel
 
 OPENCV_AVAILABLE = True
 

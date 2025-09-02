@@ -37,6 +37,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         grid_size: int,
         connections: List[Tuple[int, int]],
         textures: List[str],
+        goal_positions: List[List[List[float]]],
         placed_room: Optional[int] = None,
         obs_level: ObservationLevel = ObservationLevel.TOP_DOWN_PARTIAL,
         continuous: bool = False,
@@ -54,6 +55,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             grid_size: Size of the grid (e.g., 3 for 3x3 grid)
             connections: List of (room1, room2) tuples for connections
             textures: List of texture names for each room
+            goal_positions: List of goal positions for each room
             placed_room: Initial room index (defaults to 0)
             obs_level: Observation level (defaults to 1)
             continuous: Whether to use continuous actions (defaults to False)
@@ -79,6 +81,9 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         )
         self.textures = textures
 
+        # Set goal positions
+        self.goal_positions = goal_positions
+
         # Set placed room
         if placed_room is None:
             self.placed_room = 0  # Start in the first room
@@ -103,6 +108,10 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         # Mark this as a custom environment for background color handling
         self._is_custom_env = True
 
+        # Store observation dimensions for rendering (needed before super().__init__)
+        self.obs_width = obs_width
+        self.obs_height = obs_height
+
         super().__init__(
             obs_level=obs_level,
             max_episode_steps=MAX_EPISODE_STEPS,
@@ -113,19 +122,19 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             **kwargs,
         )
 
-        # Store observation dimensions for rendering
-        self.obs_width = obs_width
-        self.obs_height = obs_height
-
         if not self.continuous:
             self.action_space = spaces.Discrete(self.actions.move_forward + 1)
 
         # Store original observation space before updating
         original_obs_space = self.observation_space
 
-        # Update observation space to include desired_goal
+        # Update observation space to include desired_goal and achieved_goal
         self.observation_space = spaces.Dict(
-            {"observation": original_obs_space, "desired_goal": original_obs_space}
+            {
+                "observation": original_obs_space,
+                "desired_goal": original_obs_space,
+                "achieved_goal": original_obs_space,
+            }
         )
 
     def _generate_world_layout(self, pos=None):
@@ -216,17 +225,18 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
 
-        # Check if goal is achieved (only if we have goal functionality)
-        if hasattr(self, "desired_goal") and self.is_goal_achieved():
+        # Check if goal is achieved
+        if self.is_goal_achieved():
             terminated = True
             reward = 1.0  # Positive reward for achieving goal
 
-        # Return observation as dict if we have desired_goal, else return regular obs
-        if hasattr(self, "desired_goal"):
-            obs_dict = {"observation": obs, "desired_goal": self.desired_goal}
-            return obs_dict, reward, terminated, truncated, info
-        else:
-            return obs, reward, terminated, truncated, info
+        # Return observation as dict
+        obs_dict = {
+            "observation": obs,
+            "desired_goal": self.desired_goal,
+            "achieved_goal": obs,
+        }
+        return obs_dict, reward, terminated, truncated, info
 
     def reset(self, seed=None, options=None, pos=None):
         """
@@ -243,40 +253,29 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         # Call parent reset
         obs, info = super().reset(seed=seed, options=options, pos=pos)
 
-        # Generate goal if goal_positions is available
-        if hasattr(self, "goal_positions"):
-            self.desired_goal = self.get_goal()
+        # Generate goal
+        self.desired_goal = self.get_goal()
 
-            # Return observation as dict with desired_goal
-            obs_dict = {"observation": obs, "desired_goal": self.desired_goal}
-            return obs_dict, info
-        else:
-            # Return regular observation if goal_positions not set yet
-            return obs, info
+        # Return observation as dict with desired_goal and achieved_goal
+        obs_dict = {
+            "observation": obs,
+            "desired_goal": self.desired_goal,
+            "achieved_goal": obs,
+        }
+        return obs_dict, info
 
-    def get_goal(self, room_idx=None, goal_idx=None):
+    def get_goal(self):
         """
         Generate a goal by randomly selecting a room and goal position.
-
-        Args:
-            room_idx: Specific room index to select (optional)
-            goal_idx: Specific goal index within room to select (optional)
 
         Returns:
             np.ndarray: Rendered goal image
         """
-        if not hasattr(self, "goal_positions"):
-            raise AttributeError(
-                "goal_positions not initialized. Make sure to call super().__init__ after setting goal_positions in subclass."
-            )
+        # Select random room
+        room_idx = np.random.randint(len(self.goal_positions))
 
-        # Select random room if not specified
-        if room_idx is None:
-            room_idx = np.random.randint(len(self.goal_positions))
-
-        # Select random goal within room if not specified
-        if goal_idx is None:
-            goal_idx = np.random.randint(len(self.goal_positions[room_idx]))
+        # Select random goal within room
+        goal_idx = np.random.randint(len(self.goal_positions[room_idx]))
 
         # Get goal position
         goal_position = self.goal_positions[room_idx][goal_idx]
