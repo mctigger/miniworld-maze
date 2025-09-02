@@ -23,7 +23,8 @@ from miniworld_maze.core.constants import (
     MB_TO_BYTES,
     RGB_CHANNELS,
 )
-from miniworld_maze.environments.factory import NineRoomsEnvironmentWrapper
+import gymnasium as gym
+import miniworld_maze  # noqa: F401
 
 
 def benchmark_rendering_performance(
@@ -58,7 +59,12 @@ def benchmark_rendering_performance(
         print(f"\n🔍 Testing {size}x{size} observations...")
 
         # Create environment with specific observation size
-        env = NineRoomsEnvironmentWrapper(variant, size=size)
+        variant_mapping = {
+            "NineRooms": "NineRooms-v0",
+            "SpiralNineRooms": "SpiralNineRooms-v0", 
+            "TwentyFiveRooms": "TwentyFiveRooms-v0"
+        }
+        env = gym.make(variant_mapping[variant], obs_width=size, obs_height=size)
 
         # Warmup phase
         print(f"   🔥 Warming up ({num_warmup} steps)...")

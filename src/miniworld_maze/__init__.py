@@ -16,18 +16,17 @@ Main modules:
 """
 
 from .core import ObservationLevel
-from .environments.factory import (
-    NineRoomsEnvironmentWrapper,
-)
 from .environments.nine_rooms import NineRooms
 from .environments.spiral_nine_rooms import SpiralNineRooms
 from .environments.twenty_five_rooms import TwentyFiveRooms
 
+# Import factory to register environments
+from .environments import factory  # noqa: F401
+
 __version__ = "1.0.0"
 __all__ = [
-    "NineRoomsEnvironmentWrapper",
     "NineRooms",
-    "SpiralNineRooms",
+    "SpiralNineRooms", 
     "TwentyFiveRooms",
     "ObservationLevel",
 ]

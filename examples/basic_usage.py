@@ -5,12 +5,13 @@ Basic usage example for miniworld-maze environments.
 This is a minimal example showing how to create and interact with the environment.
 """
 
-from miniworld_maze import NineRoomsEnvironmentWrapper
+import gymnasium as gym
+import miniworld_maze  # noqa: F401
 
 
 def main():
-    # Create environment
-    env = NineRoomsEnvironmentWrapper(variant="NineRooms", size=64)
+    # Create environment using gymnasium registry
+    env = gym.make("NineRooms-v0", obs_width=64, obs_height=64)
     obs, info = env.reset()
 
     # obs is a dictionary containing:

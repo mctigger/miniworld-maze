@@ -10,10 +10,12 @@ import os
 import numpy as np
 from PIL import Image
 
+import gymnasium as gym
+
 from miniworld_maze.core.miniworld_gymnasium.rendering.framebuffer import (
     FrameBuffer,
 )
-from miniworld_maze.environments.factory import NineRoomsEnvironmentWrapper
+import miniworld_maze  # noqa: F401
 
 
 def generate_observations(variant, output_dir=None, high_res_full_views=False):
@@ -24,7 +26,12 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
     os.makedirs(output_dir, exist_ok=True)
 
     # Create environment
-    env = NineRoomsEnvironmentWrapper(variant=variant, size=64)
+    variant_mapping = {
+        "NineRooms": "NineRooms-v0",
+        "SpiralNineRooms": "SpiralNineRooms-v0",
+        "TwentyFiveRooms": "TwentyFiveRooms-v0"
+    }
+    env = gym.make(variant_mapping[variant], obs_width=64, obs_height=64)
 
     # Get base environment for direct render access
     base_env = env.env if hasattr(env, "env") else env

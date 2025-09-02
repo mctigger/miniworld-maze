@@ -28,7 +28,15 @@ from typing import Optional
 import cv2
 import numpy as np
 
-from miniworld_maze import NineRoomsEnvironmentWrapper, ObservationLevel
+import gymnasium as gym
+
+from miniworld_maze import ObservationLevel
+import miniworld_maze  # noqa: F401
+from miniworld_maze.utils import (
+    clamp_pixel_coords,
+    environment_to_pixel_coords,
+    get_environment_bounds,
+)
 
 OPENCV_AVAILABLE = True
 
@@ -110,18 +118,25 @@ class OpenCVLiveController:
         print(f"🔄 Creating {variant} environments...")
 
         # Create main environment (ego view)
-        self.env = NineRoomsEnvironmentWrapper(
-            variant=variant,
-            size=self.size,
+        variant_mapping = {
+            "NineRooms": "NineRooms-v0",
+            "SpiralNineRooms": "SpiralNineRooms-v0",
+            "TwentyFiveRooms": "TwentyFiveRooms-v0"
+        }
+        self.env = gym.make(
+            variant_mapping[variant],
+            obs_width=self.size,
+            obs_height=self.size,
             obs_level=self.obs_level,
             agent_mode="triangle",  # Make agent visible for better demo
             info_obs=[ObservationLevel.FIRST_PERSON],
         )
 
         # Create separate environment for top-down map
-        self.map_env = NineRoomsEnvironmentWrapper(
-            variant=variant,
-            size=self.size,
+        self.map_env = gym.make(
+            variant_mapping[variant],
+            obs_width=self.size,
+            obs_height=self.size,
             obs_level=ObservationLevel.TOP_DOWN_FULL,
             # Always use full top-down for map
             agent_mode="triangle",  # Make agent visible in map view
@@ -130,7 +145,7 @@ class OpenCVLiveController:
 
         # Synchronize both environments to same initial state
         obs, info = self.env.reset(seed=42)
-        map_obs, map_info = self.map_env.reset(seed=42)
+        map_obs, _ = self.map_env.reset(seed=42)
 
         # Store info for accessing additional observations
         self.current_info = info
@@ -216,138 +231,100 @@ class OpenCVLiveController:
 
     def get_map_view_display(self) -> Optional[np.ndarray]:
         """
-        Get current map observation with agent rendered by the engine.
+        Get current map observation with agent and goal markers.
 
         Returns:
             BGR image array for OpenCV or None if failed
         """
-        if self.map_env is not None:
-            # Get base environment to access the new get_observation method
-            base_env = self.map_env
-            while hasattr(base_env, "env") or hasattr(base_env, "_env"):
-                if hasattr(base_env, "env"):
-                    base_env = base_env.env
-                elif hasattr(base_env, "_env"):
-                    base_env = base_env._env
-                else:
-                    break
-
-            # Use the new get_observation method with agent rendering enabled
-            if hasattr(base_env, "get_observation"):
-                map_obs_with_agent = base_env.get_observation(render_agent=True)
-
-                if map_obs_with_agent is not None:
-                    # get_observation returns HWC format, so use directly
-                    obs_hwc = map_obs_with_agent
-
-                    # Convert RGB to BGR for OpenCV
-                    obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
-
-                    # Resize for display
-                    obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
-
-                    return obs_resized
-                else:
-                    return self._create_placeholder("No Map View")
-            else:
-                # Fallback to current observation with manual overlay (HWC format)
-                if self.current_map_obs is not None:
-                    obs_hwc = self.current_map_obs  # Already in HWC format
-                    obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
-                    obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
-                    return self._add_agent_marker(obs_resized)
-                else:
-                    return self._create_placeholder("No Map View")
-        else:
-            return self._create_placeholder("No Map View")
+        # Use current map observation with manual overlay
+        obs_hwc = self.current_map_obs  # Already in HWC format
+        obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
+        obs_resized = cv2.resize(obs_bgr, (self.view_size, self.view_size))
+        return self._add_agent_marker(obs_resized)
 
     def _add_agent_marker(self, map_image: np.ndarray) -> np.ndarray:
         """
-        Add agent position and orientation marker to the map view.
+        Add agent and goal position markers to the map view.
 
         Args:
             map_image: The top-down map image
 
         Returns:
-            Map image with agent marker
+            Map image with agent and goal markers
         """
-        # Get access to the base environment to read agent position
-        base_env = self.map_env
-        while hasattr(base_env, "env") or hasattr(base_env, "_env"):
-            if hasattr(base_env, "env"):
-                base_env = base_env.env
-            elif hasattr(base_env, "_env"):
-                base_env = base_env._env
-            else:
-                break
+        # Get positions from info dictionary - these are guaranteed to be available
+        agent_pos_2d = self.current_info["agent_position"]  # [x, z] coordinates as ndarray
+        goal_pos_2d = self.current_info["goal_position"]  # [x, z] coordinates as ndarray
 
-        # Get agent position and orientation
-        if hasattr(base_env, "agent") and base_env.agent is not None:
-            agent_pos = base_env.agent.pos
-            agent_dir = base_env.agent.dir
+        # Get environment bounds using utility function
+        env_min_bounds, env_max_bounds = get_environment_bounds(self.map_env)
+        env_min_bounds = np.array(env_min_bounds)
+        env_max_bounds = np.array(env_max_bounds)
 
-            # Convert world coordinates to pixel coordinates
-            # Environment bounds
-            env_min_x = base_env.min_x
-            env_max_x = base_env.max_x
-            env_min_z = base_env.min_z
-            env_max_z = base_env.max_z
+        # Create a copy to avoid modifying the original
+        marked_image = map_image.copy()
 
-            # Convert agent position to pixel coordinates
-            pixel_x = int(
-                (agent_pos[0] - env_min_x) / (env_max_x - env_min_x) * self.view_size
-            )
-            pixel_z = int(
-                (agent_pos[2] - env_min_z) / (env_max_z - env_min_z) * self.view_size
-            )
+        # Convert goal position to pixel coordinates and clamp
+        goal_pixel_x, goal_pixel_z = environment_to_pixel_coords(
+            goal_pos_2d, env_min_bounds, env_max_bounds, self.view_size
+        )
+        goal_pixel_x, goal_pixel_z = clamp_pixel_coords(
+            goal_pixel_x, goal_pixel_z, self.view_size
+        )
 
-            # Clamp to image bounds
-            pixel_x = max(0, min(self.view_size - 1, pixel_x))
-            pixel_z = max(0, min(self.view_size - 1, pixel_z))
+        # Draw goal as a red circle
+        goal_radius = max(7, self.view_size // 70)
+        cv2.circle(
+            marked_image, (goal_pixel_x, goal_pixel_z), goal_radius, (0, 0, 255), -1
+        )  # Red filled circle
+        cv2.circle(
+            marked_image,
+            (goal_pixel_x, goal_pixel_z),
+            goal_radius + 2,
+            (255, 255, 255),
+            2,
+        )  # White outline
 
-            # Create a copy to avoid modifying the original
-            marked_image = map_image.copy()
+        # Convert agent position to pixel coordinates and clamp
+        pixel_x, pixel_z = environment_to_pixel_coords(
+            agent_pos_2d, env_min_bounds, env_max_bounds, self.view_size
+        )
+        pixel_x, pixel_z = clamp_pixel_coords(pixel_x, pixel_z, self.view_size)
 
-            # Draw agent position as a circle
-            agent_radius = max(5, self.view_size // 80)  # Scale with image size
-            cv2.circle(
-                marked_image, (pixel_x, pixel_z), agent_radius, (0, 255, 255), -1
-            )  # Yellow filled circle
-            cv2.circle(
-                marked_image, (pixel_x, pixel_z), agent_radius + 2, (0, 0, 0), 2
-            )  # Black outline
+        # Draw agent position as a circle
+        agent_radius = max(5, self.view_size // 80)
+        cv2.circle(
+            marked_image, (pixel_x, pixel_z), agent_radius, (0, 255, 255), -1
+        )  # Yellow filled circle
+        cv2.circle(
+            marked_image, (pixel_x, pixel_z), agent_radius + 2, (0, 0, 0), 2
+        )  # Black outline
 
-            # Draw direction indicator (small arrow/line)
-            if agent_dir is not None:
-                # Calculate direction vector
-                dir_length = agent_radius + 8
-                end_x = int(pixel_x + dir_length * math.cos(agent_dir))
-                end_z = int(pixel_z + dir_length * math.sin(agent_dir))
+        # Draw direction indicator
+        # Get base environment for agent direction
+        base_env = self.map_env.unwrapped
+        agent_dir = base_env.agent.dir
+        dir_length = agent_radius + 8
+        end_x = int(pixel_x + dir_length * math.cos(agent_dir))
+        end_z = int(pixel_z + dir_length * math.sin(agent_dir))
 
-                # Draw direction line
-                cv2.line(
-                    marked_image, (pixel_x, pixel_z), (end_x, end_z), (0, 255, 0), 3
-                )  # Green direction line
+        # Draw direction line
+        cv2.line(
+            marked_image, (pixel_x, pixel_z), (end_x, end_z), (0, 255, 0), 3
+        )  # Green direction line
 
-                # Draw small arrowhead
-                arrow_size = 5
-                arrow_angle = 0.5  # radians
+        # Draw arrowhead
+        arrow_size = 5
+        arrow_angle = 0.5  # radians
+        left_x = int(end_x - arrow_size * math.cos(agent_dir - arrow_angle))
+        left_z = int(end_z - arrow_size * math.sin(agent_dir - arrow_angle))
+        right_x = int(end_x - arrow_size * math.cos(agent_dir + arrow_angle))
+        right_z = int(end_z - arrow_size * math.sin(agent_dir + arrow_angle))
 
-                # Calculate arrowhead points
-                left_x = int(end_x - arrow_size * math.cos(agent_dir - arrow_angle))
-                left_z = int(end_z - arrow_size * math.sin(agent_dir - arrow_angle))
-                right_x = int(end_x - arrow_size * math.cos(agent_dir + arrow_angle))
-                right_z = int(end_z - arrow_size * math.sin(agent_dir + arrow_angle))
+        cv2.line(marked_image, (end_x, end_z), (left_x, left_z), (0, 255, 0), 2)
+        cv2.line(marked_image, (end_x, end_z), (right_x, right_z), (0, 255, 0), 2)
 
-                # Draw arrowhead
-                cv2.line(marked_image, (end_x, end_z), (left_x, left_z), (0, 255, 0), 2)
-                cv2.line(
-                    marked_image, (end_x, end_z), (right_x, right_z), (0, 255, 0), 2
-                )
-
-            return marked_image
-        else:
-            return map_image
+        return marked_image
 
     def _create_placeholder(self, text: str) -> np.ndarray:
         """Create a placeholder image with text."""
@@ -484,16 +461,18 @@ class OpenCVLiveController:
         legend_y = goal_y + 20
         legend_font_scale = 0.4
 
-        # Legend text - agent is now rendered by the engine
-        cv2.putText(
-            combined_img,
-            "Agent Rendered by Engine",
-            (legend_x, legend_y),
-            font,
-            legend_font_scale,
-            (200, 200, 200),
-            1,
-        )
+        # Legend text - positions from info dict
+        legend_lines = ["Yellow: Agent (from info)", "Red: Goal (from info)"]
+        for i, line in enumerate(legend_lines):
+            cv2.putText(
+                combined_img,
+                line,
+                (legend_x, legend_y + i * 15),
+                font,
+                legend_font_scale,
+                (200, 200, 200),
+                1,
+            )
 
         # Create info panel at bottom
         info_y = self.view_size + 70
@@ -560,7 +539,7 @@ class OpenCVLiveController:
                 # Use same seed to keep environments synchronized
                 seed = np.random.randint(0, 1000000)
                 obs, info = self.env.reset(seed=seed)
-                map_obs, map_info = self.map_env.reset(seed=seed)
+                map_obs, _ = self.map_env.reset(seed=seed)
 
                 # Store info for accessing additional observations
                 self.current_info = info
@@ -588,9 +567,7 @@ class OpenCVLiveController:
             action = self.action_map[key]
             # Step both environments with the same action
             obs, reward, terminated, truncated, info = self.env.step(action)
-            map_obs, map_reward, map_terminated, map_truncated, map_info = (
-                self.map_env.step(action)
-            )
+            map_obs, _, _, _, _ = self.map_env.step(action)
 
             # Store info for accessing additional observations
             self.current_info = info
@@ -622,7 +599,7 @@ class OpenCVLiveController:
                 # Reset both environments with same seed
                 seed = np.random.randint(0, 1000000)
                 obs, info = self.env.reset(seed=seed)
-                map_obs, map_info = self.map_env.reset(seed=seed)
+                map_obs, _ = self.map_env.reset(seed=seed)
                 # Store info for accessing additional observations
                 self.current_info = info
                 # Extract observation array from dict
@@ -740,7 +717,7 @@ def main():
 
     # Convert string to enum
     obs_level_map = {
-        "FIRST_PERSON": ObservationLevel.TOP_DOWN_PARTIAL,
+        "FIRST_PERSON": ObservationLevel.FIRST_PERSON,
         "TOP_DOWN_PARTIAL": ObservationLevel.TOP_DOWN_PARTIAL,
         "TOP_DOWN_FULL": ObservationLevel.TOP_DOWN_FULL,
     }
