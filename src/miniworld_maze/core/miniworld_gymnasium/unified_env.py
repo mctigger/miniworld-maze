@@ -332,34 +332,32 @@ class UnifiedMiniWorldEnv(gym.Env):
         self._render_static()
 
         # Generate the first camera image
-        obs = self._generate_observation()
+        obs = self._generate_observation(self.obs_level)
 
         # Generate additional observations for info dictionary if specified
         info = {}
         if self.info_obs is not None:
             for obs_level in self.info_obs:
-                # Temporarily change obs_level to generate the desired observation
-                original_obs_level = self.obs_level
-                self.obs_level = obs_level
-                info_obs = self._generate_observation()
-                self.obs_level = original_obs_level
+                # Generate observation with the specified level
+                info_obs = self._generate_observation(observation_level=obs_level)
                 # Use the observation level name as key
                 info[str(obs_level)] = info_obs
 
         # Return first observation with info dict for Gymnasium compatibility
         return obs, info
 
-    def _generate_observation(self, render_agent: bool = None):
-        """Generate observation based on current observation level.
+    def _generate_observation(self, observation_level, render_agent: bool = None):
+        """Generate observation based on specified observation level.
 
         Args:
+            observation_level: Observation level to use.
             render_agent: Whether to render the agent in the observation.
                          If None, uses default behavior based on observation level.
         """
         # Import ObservationLevel here to avoid circular imports
         from ..observation_types import ObservationLevel
 
-        if self.obs_level == ObservationLevel.TOP_DOWN_PARTIAL:
+        if observation_level == ObservationLevel.TOP_DOWN_PARTIAL:
             if self.agent_mode == "empty":
                 # Agent mode 'empty' always renders without agent
                 render_ag = False
@@ -371,19 +369,19 @@ class UnifiedMiniWorldEnv(gym.Env):
                 render_ag = True
             return self.render_top_view(POMDP=True, render_ag=render_ag)
 
-        elif self.obs_level == ObservationLevel.TOP_DOWN_FULL:
+        elif observation_level == ObservationLevel.TOP_DOWN_FULL:
             # Use explicit render_agent parameter or default to True
             render_ag = render_agent if render_agent is not None else True
             return self.render_top_view(POMDP=False, render_ag=render_ag)
 
-        elif self.obs_level == ObservationLevel.FIRST_PERSON:
+        elif observation_level == ObservationLevel.FIRST_PERSON:
             # First person view doesn't include the agent anyway
             return self.render_obs()
 
         else:
             valid_levels = list(ObservationLevel)
             raise ValueError(
-                f"Invalid obs_level {self.obs_level}. Must be one of {valid_levels}"
+                f"Invalid obs_level {observation_level}. Must be one of {valid_levels}"
             )
 
     def _calculate_carried_object_position(self, agent_pos, ent):
@@ -507,7 +505,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         self._process_action(action)
 
         # Generate observation
-        observation = self._generate_observation()
+        observation = self._generate_observation(self.obs_level)
 
         # Calculate step results
         reward, terminated, info = self._calculate_step_results(observation)
@@ -586,11 +584,8 @@ class UnifiedMiniWorldEnv(gym.Env):
         info = {}
         if self.info_obs is not None:
             for obs_level in self.info_obs:
-                # Temporarily change obs_level to generate the desired observation
-                original_obs_level = self.obs_level
-                self.obs_level = obs_level
-                info_obs = self._generate_observation()
-                self.obs_level = original_obs_level
+                # Generate observation with the specified level
+                info_obs = self._generate_observation(observation_level=obs_level)
                 # Use the observation level name as key
                 info[str(obs_level)] = info_obs
 

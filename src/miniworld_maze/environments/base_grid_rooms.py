@@ -227,7 +227,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         obs, reward, terminated, truncated, info = super().step(action)
 
         # Check if goal is achieved
-        if self.is_goal_achieved():
+        if self._is_goal_achieved():
             terminated = True
             reward = 1.0  # Positive reward for achieving goal
 
@@ -327,7 +327,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
         return obs
 
-    def is_goal_achieved(self, pos=None, threshold=0.5):
+    def _is_goal_achieved(self, pos=None, threshold=0.5):
         """
         Check if the agent has achieved the current goal.
 
