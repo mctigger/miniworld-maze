@@ -47,9 +47,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "black>=22.0,<25.0",
-    "isort>=5.10,<6.0",
-    "flake8>=4.0,<7.0",
     "ruff>=0.1.0,<1.0.0",
     "build>=0.8.0,<2.0.0",
     "twine>=4.0.0,<6.0.0",
@@ -64,8 +61,6 @@ Repository = "https://github.com/mctigger/miniworld-maze"
 "Bug Tracker" = "https://github.com/mctigger/miniworld-maze/issues"
 Documentation = "https://github.com/mctigger/miniworld-maze#readme"
 
-[project.scripts]
-generate-observations = "miniworld_maze.tools.generate_observations:main"
 
 [tool.uv.build-backend]
 source-include = [
@@ -74,28 +69,4 @@ source-include = [
     "src/miniworld_maze/core/miniworld_gymnasium/textures/**"
 ]
 
-[tool.black]
-line-length = 88
-target-version = ['py38']
-
-[tool.isort]
-profile = "black"
-line_length = 88
-
-[tool.ruff]
-target-version = "py38"
-line-length = 88
-
-[tool.ruff.lint]
-select = ["E", "F", "W", "I"]
-ignore = [
-    "F403",  # 'from module import *' used; unable to detect undefined names
-    "F405",  # name may be undefined, or defined from star imports  
-]
-
-[tool.ruff.lint.per-file-ignores]
-"**/opengl.py" = ["F403", "F405"]
-"**/entities/agent.py" = ["F403", "F405"] 
-"**/unified_env.py" = ["F403", "F405"]
-"**/rendering/*.py" = ["F403", "F405"]
 
