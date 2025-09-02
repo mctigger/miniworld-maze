@@ -15,6 +15,19 @@ Main modules:
 - tools: Observation generation and utilities
 """
 
+import os
+import warnings
+
+# Set PYGLET_HEADLESS=1 by default if not already set
+if "PYGLET_HEADLESS" not in os.environ:
+    os.environ["PYGLET_HEADLESS"] = "1"
+    warnings.warn(
+        "Automatically set PYGLET_HEADLESS=1 for headless rendering. "
+        "Set PYGLET_HEADLESS=0 before importing miniworld_maze to override this behavior.",
+        UserWarning,
+        stacklevel=2
+    )
+
 from .core import ObservationLevel
 from .environments.nine_rooms import NineRooms
 from .environments.spiral_nine_rooms import SpiralNineRooms
