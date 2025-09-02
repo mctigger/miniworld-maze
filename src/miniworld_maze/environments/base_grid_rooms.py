@@ -77,7 +77,8 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
         # Validate and set textures
         assert len(textures) == self.total_rooms, (
-            f"Textures for floor should be same as the number of the rooms ({self.total_rooms})"
+            f"Textures for floor should be same as the number of the rooms "
+            f"({self.total_rooms})"
         )
         self.textures = textures
 
@@ -232,18 +233,14 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
         # Add agent and goal positions to info dictionary
         agent_pos = self.agent.pos
-        info["agent_position"] = np.array([agent_pos[0], agent_pos[2]])  # x, z (y=height)
+        info["agent_position"] = np.array([agent_pos[0], agent_pos[2]])  # x, z
 
         if hasattr(self, "_current_goal_position"):
             goal_pos = self._current_goal_position
-            info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z (y=height)
+            info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z
 
         # Return observation as dict
-        obs_dict = {
-            "observation": obs,
-            "desired_goal": self.desired_goal,
-            "achieved_goal": obs,
-        }
+        obs_dict = self._build_observation_dict(obs)
         return obs_dict, reward, terminated, truncated, info
 
     def reset(self, seed=None, options=None, pos=None):
@@ -266,18 +263,14 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
         # Add agent and goal positions to info dictionary
         agent_pos = self.agent.pos
-        info["agent_position"] = np.array([agent_pos[0], agent_pos[2]])  # x, z (y=height)
+        info["agent_position"] = np.array([agent_pos[0], agent_pos[2]])  # x, z
 
         if hasattr(self, "_current_goal_position"):
             goal_pos = self._current_goal_position
-            info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z (y=height)
+            info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z
 
         # Return observation as dict with desired_goal and achieved_goal
-        obs_dict = {
-            "observation": obs,
-            "desired_goal": self.desired_goal,
-            "achieved_goal": obs,
-        }
+        obs_dict = self._build_observation_dict(obs)
         return obs_dict, info
 
     def get_goal(self):
@@ -357,3 +350,46 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         distance = np.linalg.norm(pos_array - goal_array)
 
         return bool(distance < threshold)
+
+    @staticmethod
+    def _generate_goal_positions(
+        grid_size: int, room_size: Union[int, float], goals_per_room: int = 2
+    ) -> List[List[List[float]]]:
+        """
+        Generate goal positions for grid layout.
+        Args:
+            grid_size: Size of the grid (e.g., 3 for 3x3, 5 for 5x5)
+            room_size: Size of each room
+            goals_per_room: Number of goals per room (1 or 2)
+        Returns:
+            List of goal positions for each room
+        """
+        goal_positions = []
+        for i in range(grid_size):  # rows
+            for j in range(grid_size):  # columns
+                center_x = room_size * j + room_size / 2
+                center_z = room_size * i + room_size / 2
+                if goals_per_room == 1:
+                    # One goal per room at the center
+                    goal_positions.append([[center_x, 0.0, center_z]])
+                else:
+                    # Two goals per room: center-left and center-right
+                    goal_positions.append([
+                        [center_x - 1.0, 0.0, center_z],  # left goal
+                        [center_x + 1.0, 0.0, center_z],  # right goal
+                    ])
+        return goal_positions
+
+    def _build_observation_dict(self, obs: np.ndarray) -> dict:
+        """
+        Build the standard observation dictionary format.
+        Args:
+            obs: The observation array
+        Returns:
+            Dictionary with observation, desired_goal, and achieved_goal
+        """
+        return {
+            "observation": obs,
+            "desired_goal": self.desired_goal,
+            "achieved_goal": obs,
+        }

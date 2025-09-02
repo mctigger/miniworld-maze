@@ -1,6 +1,7 @@
 """NineRooms environment implementation."""
 
 from ..core import ObservationLevel
+from ..core.constants import TextureThemes
 from .base_grid_rooms import GridRoomsEnvironment
 
 
@@ -46,31 +47,12 @@ class NineRooms(GridRoomsEnvironment):
             (6, 7),
             (7, 8),
         ]
-        default_textures = [
-            "beige",
-            "lightbeige",
-            "lightgray",
-            "copperred",
-            "skyblue",
-            "lightcobaltgreen",
-            "oakbrown",
-            "navyblue",
-            "cobaltgreen",
-        ]
+        default_textures = TextureThemes.NINE_ROOMS
 
         # Initialize goal positions for each room (2 goals per room)
-        goal_positions = []
-        for i in range(3):  # rows
-            for j in range(3):  # columns
-                center_x = room_size * j + room_size / 2
-                center_z = room_size * i + room_size / 2
-                # Two goals per room: center-left and center-right
-                goal_positions.append(
-                    [
-                        [center_x - 1.0, 0.0, center_z],  # left goal
-                        [center_x + 1.0, 0.0, center_z],  # right goal
-                    ]
-                )
+        goal_positions = GridRoomsEnvironment._generate_goal_positions(
+            3, room_size, goals_per_room=2
+        )
 
         super().__init__(
             grid_size=3,

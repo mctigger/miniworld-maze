@@ -57,23 +57,64 @@ DEFAULT_BENCHMARK_STEPS: Final[int] = 100
 DEFAULT_WARMUP_STEPS: Final[int] = 10
 
 # ========================
-# OBSERVATION TEST POSITIONS
+# TEXTURE THEMES
 # ========================
 
+class TextureThemes:
+    """Pre-defined texture themes for different environments."""
 
-# Convenient position calculations for standard room layouts
-class RoomPositions:
-    """Pre-calculated positions for standard room layouts."""
+    NINE_ROOMS = [
+        "beige",
+        "lightbeige",
+        "lightgray",
+        "copperred",
+        "skyblue",
+        "lightcobaltgreen",
+        "oakbrown",
+        "navyblue",
+        "cobaltgreen",
+    ]
 
-    # NineRooms (3x3) strategic positions
-    NINE_ROOMS_CENTER: Final[tuple[float, float, float]] = (22.5, 0.0, 22.5)
-    NINE_ROOMS_TOP_LEFT: Final[tuple[float, float, float]] = (7.5, 0.0, 7.5)
-    NINE_ROOMS_BOTTOM_RIGHT: Final[tuple[float, float, float]] = (37.5, 0.0, 37.5)
+    SPIRAL_NINE_ROOMS = [
+        "beige",
+        "lightbeige",
+        "lightgray",
+        "copperred",
+        "skyblue",
+        "lightcobaltgreen",
+        "oakbrown",
+        "navyblue",
+        "cobaltgreen",
+    ]
 
-    # TwentyFiveRooms (5x5) strategic positions
-    TWENTY_FIVE_CENTER: Final[tuple[float, float, float]] = (75.0, 0.0, 75.0)
-    TWENTY_FIVE_CORNER: Final[tuple[float, float, float]] = (37.5, 0.0, 37.5)
-    TWENTY_FIVE_FAR_CORNER: Final[tuple[float, float, float]] = (112.5, 0.0, 112.5)
+    TWENTY_FIVE_ROOMS = [
+        "crimson",
+        "beanpaste",
+        "cobaltgreen",
+        "lightnavyblue",
+        "skyblue",
+        "lightcobaltgreen",
+        "oakbrown",
+        "copperred",
+        "lightgray",
+        "lime",
+        "turquoise",
+        "violet",
+        "beige",
+        "morningglory",
+        "silver",
+        "magenta",
+        "sunnyyellow",
+        "blueberry",
+        "lightbeige",
+        "seablue",
+        "lemongrass",
+        "orchid",
+        "redbean",
+        "orange",
+        "realblueberry",
+    ]
+
 
 
 # ========================

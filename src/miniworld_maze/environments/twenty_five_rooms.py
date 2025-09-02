@@ -1,6 +1,7 @@
 """TwentyFiveRooms environment implementation."""
 
 from ..core import ObservationLevel
+from ..core.constants import TextureThemes
 from .base_grid_rooms import GridRoomsEnvironment
 
 
@@ -78,46 +79,12 @@ class TwentyFiveRooms(GridRoomsEnvironment):
             (22, 23),
             (23, 24),
         ]
-        default_textures = [
-            "crimson",
-            "beanpaste",
-            "cobaltgreen",
-            "lightnavyblue",
-            "skyblue",
-            "lightcobaltgreen",
-            "oakbrown",
-            "copperred",
-            "lightgray",
-            "lime",
-            "turquoise",
-            "violet",
-            "beige",
-            "morningglory",
-            "silver",
-            "magenta",
-            "sunnyyellow",
-            "blueberry",
-            "lightbeige",
-            "seablue",
-            "lemongrass",
-            "orchid",
-            "redbean",
-            "orange",
-            "realblueberry",
-        ]
+        default_textures = TextureThemes.TWENTY_FIVE_ROOMS
 
         # Initialize goal positions for each room (1 goal per room at center)
-        goal_positions = []
-        for i in range(5):  # rows
-            for j in range(5):  # columns
-                center_x = room_size * j + room_size / 2
-                center_z = room_size * i + room_size / 2
-                # One goal per room at the center
-                goal_positions.append(
-                    [
-                        [center_x, 0.0, center_z],
-                    ]
-                )
+        goal_positions = GridRoomsEnvironment._generate_goal_positions(
+            5, room_size, goals_per_room=1
+        )
 
         super().__init__(
             grid_size=5,
