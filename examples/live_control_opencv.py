@@ -215,9 +215,9 @@ class OpenCVLiveController:
         Returns:
             BGR image array for OpenCV or None if failed
         """
-        if self.current_info is not None and "FIRST_PERSON" in self.current_info:
+        if self.current_info is not None and ObservationLevel.FIRST_PERSON in self.current_info:
             # Get first person observation from info
-            obs_hwc = self.current_info["FIRST_PERSON"]
+            obs_hwc = self.current_info[ObservationLevel.FIRST_PERSON]
 
             # Convert RGB to BGR for OpenCV
             obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)

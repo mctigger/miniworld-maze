@@ -8,12 +8,11 @@ This script demonstrates:
 3. Executing 1000 random steps and visualizing agent trajectory on top-down view
 """
 
-from typing import List, Tuple
+from typing import List
 import numpy as np
 from PIL import Image
 import gymnasium as gym
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 
 from miniworld_maze import ObservationLevel
 import miniworld_maze  # noqa: F401
@@ -24,10 +23,10 @@ def save_single_topdown_view(env: gym.Env) -> str:
     print("🎯 Generating single top-down full view...")
     
     # Reset environment to ensure consistent state
-    env.reset(seed=42)
+    _, info = env.reset(seed=42)
     
-    # Use render_top_view directly for full view
-    obs_image = env.unwrapped.render_top_view(POMDP=False)
+    # Get top-down full view from info dict
+    obs_image = info[ObservationLevel.TOP_DOWN_FULL]
     
     # Save the observation as PNG
     filename = "single_topdown_view.png"
@@ -89,7 +88,7 @@ def collect_trajectory_and_visualize(env: gym.Env) -> str:
     print("🔍 Collecting agent trajectory over 1000 random steps...")
     
     # Reset environment
-    obs, _ = env.reset(seed=42)
+    obs, info = env.reset(seed=42)
     
     # Get scene extent from environment using the new public method
     env_unwrapped = env.unwrapped
@@ -103,17 +102,17 @@ def collect_trajectory_and_visualize(env: gym.Env) -> str:
     
     # Execute 1000 random steps
     for step in range(1000):
-        # Get current agent position
-        agent_pos = env_unwrapped.agent.pos
-        trajectory_positions.append((agent_pos[0], agent_pos[2]))  # x, z coordinates
-        
-        # Take random action
+        # Take random action first to get info dict with position
         action = env.action_space.sample()
-        obs, reward, terminated, truncated, _ = env.step(action)
+        _, _, terminated, truncated, info = env.step(action)
+        
+        # Get current agent position from info dict
+        agent_pos = info["pos"]
+        trajectory_positions.append((agent_pos[0], agent_pos[1]))  # x, z coordinates
         
         # Reset if episode ended
         if terminated or truncated:
-            obs, _ = env.reset()
+            obs, info = env.reset()
         
         if (step + 1) % 200 == 0:
             print(f"   Completed {step + 1}/1000 steps")
@@ -122,7 +121,7 @@ def collect_trajectory_and_visualize(env: gym.Env) -> str:
     
     # Get top-down view for background
     env.reset(seed=42)
-    background_image = env_unwrapped.render_top_view(POMDP=False)
+    background_image = env.unwrapped.render_top_view(POMDP=False)
     
     # Create matplotlib figure
     fig, ax = plt.subplots(1, 1, figsize=(12, 12))
@@ -175,12 +174,13 @@ def main() -> None:
     print("🖼️  Top-Down View Generator")
     print("=" * 50)
     
-    # Create a single environment instance
+    # Create a single environment instance with info_obs for top-down full view
     env = gym.make(
         "NineRooms-v0",
         obs_level=ObservationLevel.TOP_DOWN_PARTIAL,
         obs_width=256,
         obs_height=256,
+        info_obs=[ObservationLevel.TOP_DOWN_FULL],
     )
     
     try:

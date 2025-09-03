@@ -349,8 +349,8 @@ class UnifiedMiniWorldEnv(gym.Env):
             for obs_level in self.info_obs:
                 # Generate observation with the specified level
                 info_obs = self._generate_observation(observation_level=obs_level)
-                # Use the observation level name as key
-                info[str(obs_level)] = info_obs
+                # Use the observation level enum as key
+                info[obs_level] = info_obs
 
         # Return first observation with info dict for Gymnasium compatibility
         return obs, info
@@ -584,19 +584,14 @@ class UnifiedMiniWorldEnv(gym.Env):
 
     def _calculate_step_results(self, observation):
         """Calculate reward, termination, and info for step."""
-        # Generate topdown view for info if needed
-        topdown = None
-        if self.obs_level != 2:  # Not TOP_DOWN_FULL
-            topdown = self.render_top_view(POMDP=False, frame_buffer=self.topdown_fb)
-
         # Generate additional observations for info dictionary if specified
         info = {}
         if self.info_obs is not None:
             for obs_level in self.info_obs:
                 # Generate observation with the specified level
                 info_obs = self._generate_observation(observation_level=obs_level)
-                # Use the observation level name as key
-                info[str(obs_level)] = info_obs
+                # Use the observation level enum as key
+                info[obs_level] = info_obs
 
         # Check termination
         if self.step_count >= self.max_episode_steps:
@@ -604,8 +599,7 @@ class UnifiedMiniWorldEnv(gym.Env):
             reward = 0
             info.update(
                 {
-                    "pos": self.agent.pos,
-                    "mdp_view": topdown if topdown is not None else observation,
+                    "pos": np.array([self.agent.pos[0], self.agent.pos[2]]),
                 }
             )
         else:
@@ -613,8 +607,7 @@ class UnifiedMiniWorldEnv(gym.Env):
             terminated = False
             info.update(
                 {
-                    "pos": self.agent.pos,
-                    "mdp_view": topdown if topdown is not None else observation,
+                    "pos": np.array([self.agent.pos[0], self.agent.pos[2]]),
                 }
             )
 
