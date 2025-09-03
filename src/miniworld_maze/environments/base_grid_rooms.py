@@ -259,7 +259,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         obs, info = super().reset(seed=seed, options=options, pos=pos)
 
         # Generate goal
-        self.desired_goal = self.get_goal()
+        self.desired_goal = self._get_goal()
 
         # Add agent and goal positions to info dictionary
         agent_pos = self.agent.pos
@@ -273,7 +273,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         obs_dict = self._build_observation_dict(obs)
         return obs_dict, info
 
-    def get_goal(self):
+    def _get_goal(self):
         """
         Generate a goal by randomly selecting a room and goal position.
 
