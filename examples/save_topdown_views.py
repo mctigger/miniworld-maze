@@ -91,12 +91,10 @@ def collect_trajectory_and_visualize(env: gym.Env) -> str:
     # Reset environment
     obs, _ = env.reset(seed=42)
     
-    # Get actual scene bounds from environment (same as render_top_view uses)
+    # Get scene extent from environment using the new public method
     env_unwrapped = env.unwrapped
-    scene_min_x = env_unwrapped.min_x - 1
-    scene_max_x = env_unwrapped.max_x + 1  
-    scene_min_z = env_unwrapped.min_z - 1
-    scene_max_z = env_unwrapped.max_z + 1
+    scene_extent = env_unwrapped.get_extent()
+    scene_min_x, scene_max_x, scene_min_z, scene_max_z = scene_extent
     
     print(f"   Environment bounds: x=[{scene_min_x:.1f}, {scene_max_x:.1f}], z=[{scene_min_z:.1f}, {scene_max_z:.1f}]")
     
@@ -131,7 +129,7 @@ def collect_trajectory_and_visualize(env: gym.Env) -> str:
     
     # Display background image using actual scene bounds
     # Use 'upper' origin to match how single_topdown_view.png is saved (standard image coordinates)
-    ax.imshow(background_image, extent=[scene_min_x, scene_max_x, scene_max_z, scene_min_z], origin='upper')
+    ax.imshow(background_image, extent=[scene_extent[0], scene_extent[1], scene_extent[3], scene_extent[2]], origin='upper')
     
     # Extract x and z coordinates (no normalization needed now)
     x_coords = [pos[0] for pos in trajectory_positions]

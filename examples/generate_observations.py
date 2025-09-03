@@ -164,7 +164,7 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
 
     for i, (pos, pos_name) in enumerate(test_positions):
         # First-person view from agent's perspective
-        render_obs = env.render_on_pos(pos)
+        render_obs = base_env.render_on_pos(pos)
 
         # Convert CHW to HWC for PIL
         if len(render_obs.shape) == 3 and render_obs.shape[0] == 3:

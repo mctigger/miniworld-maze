@@ -19,6 +19,18 @@ pip install miniworld-maze
 
 ## Usage
 
+### Registered Environments
+
+This package registers the following gymnasium environments:
+
+| Environment ID | Description | Rooms | Max Steps |
+|---|---|---|---|
+| `NineRooms-v0` | Standard 3×3 grid with adjacent room connections | 9 | 1000 |
+| `SpiralNineRooms-v0` | 3×3 grid with spiral connection pattern | 9 | 1000 |
+| `TwentyFiveRooms-v0` | Large 5×5 grid with complex navigation | 25 | 1000 |
+
+All environments use `TOP_DOWN_PARTIAL` observation level and factory default room/door sizes by default.
+
 ### Basic Usage
 
 See `examples/basic_usage.py` for a complete working example:
@@ -31,12 +43,13 @@ Basic usage example for miniworld-maze environments.
 This is a minimal example showing how to create and interact with the environment.
 """
 
-from miniworld_maze import NineRoomsEnvironmentWrapper
+import gymnasium as gym
+import miniworld_maze  # noqa: F401
 
 
 def main():
-    # Create environment
-    env = NineRoomsEnvironmentWrapper(variant="NineRooms", size=64)
+    # Create environment using gymnasium registry
+    env = gym.make("NineRooms-v0", obs_width=64, obs_height=64)
     obs, info = env.reset()
 
     # obs is a dictionary containing:
@@ -148,14 +161,15 @@ Each environment supports three different observation modes:
 All environments can be customized with the following parameters:
 
 ```python
-from miniworld_maze import NineRoomsEnvironmentWrapper
-from miniworld_maze.core import ObservationLevel
+import gymnasium as gym
+from miniworld_maze import ObservationLevel
+import miniworld_maze  # noqa: F401
 
-env = NineRoomsEnvironmentWrapper(
-    variant="NineRooms",                    # "NineRooms", "SpiralNineRooms", "TwentyFiveRooms"
+env = gym.make(
+    "NineRooms-v0",                        # Environment variant
     obs_level=ObservationLevel.TOP_DOWN_PARTIAL,  # Observation type
-    continuous=False,                       # Use continuous actions
-    size=64,                               # Observation image size (64x64)
+    obs_width=64,                          # Observation image width
+    obs_height=64,                         # Observation image height
     room_size=5,                           # Size of each room in environment units
     door_size=2,                           # Size of doors between rooms  
     agent_mode="empty",                    # Agent rendering: "empty", "circle", "triangle"
