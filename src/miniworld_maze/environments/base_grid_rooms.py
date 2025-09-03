@@ -46,6 +46,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         agent_mode: Optional[str] = None,
         obs_width: int = DEFAULT_OBS_WIDTH,
         obs_height: int = DEFAULT_OBS_HEIGHT,
+        render_mode=None,
         **kwargs,
     ):
         """
@@ -64,6 +65,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             agent_mode: Agent rendering mode ('triangle', 'circle', 'empty')
             obs_width: Observation width in pixels (defaults to DEFAULT_OBS_WIDTH)
             obs_height: Observation height in pixels (defaults to DEFAULT_OBS_HEIGHT)
+            render_mode: Render mode ("human", "rgb_array", or None)
             **kwargs: Additional arguments passed to parent class
         """
 
@@ -120,6 +122,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             agent_mode=self.agent_mode,
             obs_width=obs_width,
             obs_height=obs_height,
+            render_mode=render_mode,
             **kwargs,
         )
 

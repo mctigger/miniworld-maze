@@ -21,6 +21,7 @@ class MiniWorldEnv(UnifiedMiniWorldEnv):
         window_height=600,
         params=DEFAULT_PARAMS,
         domain_rand=False,
+        render_mode=None,
     ):
         """
         Initialize base MiniWorld environment.
@@ -33,6 +34,7 @@ class MiniWorldEnv(UnifiedMiniWorldEnv):
             window_height: Window height for human rendering
             params: Environment parameters for domain randomization
             domain_rand: Whether to enable domain randomization
+            render_mode: Render mode ("human", "rgb_array", or None)
         """
         # Mark this as a base environment (not custom) for background color handling
         self._is_custom_env = False
@@ -49,4 +51,5 @@ class MiniWorldEnv(UnifiedMiniWorldEnv):
             window_height=window_height,
             params=params,
             domain_rand=domain_rand,
+            render_mode=render_mode,
         )

@@ -63,7 +63,7 @@ class UnifiedMiniWorldEnv(gym.Env):
     both the enhanced features of CustomMiniWorldEnv and the legacy BaseEnv functionality.
     """
 
-    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 30}
+    metadata = {"render_modes": ["human", "rgb_array"], "video.frames_per_second": 30}
 
     # Enumeration of possible actions
     class Actions(IntEnum):
@@ -98,6 +98,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         params=DEFAULT_PARAMS,
         domain_rand=False,
         info_obs: Optional[List[ObservationLevel]] = None,
+        render_mode=None,
     ):
         """
         Initialize unified MiniWorld environment.
@@ -114,6 +115,7 @@ class UnifiedMiniWorldEnv(gym.Env):
             params: Environment parameters for domain randomization
             domain_rand: Whether to enable domain randomization
             info_obs: List of observation levels to include in info dictionary
+            render_mode: Render mode ("human", "rgb_array", or None)
         """
         # Store configuration
         self.obs_level = obs_level
@@ -123,6 +125,13 @@ class UnifiedMiniWorldEnv(gym.Env):
         self.params = params
         self.domain_rand = domain_rand
         self.info_obs = info_obs
+        self.render_mode = render_mode
+
+        # Validate render_mode
+        if render_mode is not None and render_mode not in self.metadata["render_modes"]:
+            raise ValueError(
+                f"render_mode must be one of {self.metadata['render_modes']}, got {render_mode}"
+            )
 
         # Setup action space
         self._setup_action_space()
