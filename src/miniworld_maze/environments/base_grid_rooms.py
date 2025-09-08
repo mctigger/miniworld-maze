@@ -242,9 +242,8 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         agent_pos = self.agent.pos
         info["agent_position"] = np.array([agent_pos[0], agent_pos[2]])  # x, z
 
-        if hasattr(self, "_current_goal_position"):
-            goal_pos = self._current_goal_position
-            info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z
+        goal_pos = self._current_goal_position
+        info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z
 
         # Return observation as dict
         obs_dict = self._build_observation_dict(obs)
@@ -265,6 +264,8 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         # Call parent reset
         obs, info = super().reset(seed=seed, options=options, pos=pos)
 
+        info["success"] = 0.0
+
         # Generate goal
         self.desired_goal = self._get_goal()
 
@@ -272,9 +273,8 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         agent_pos = self.agent.pos
         info["agent_position"] = np.array([agent_pos[0], agent_pos[2]])  # x, z
 
-        if hasattr(self, "_current_goal_position"):
-            goal_pos = self._current_goal_position
-            info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z
+        goal_pos = self._current_goal_position
+        info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z
 
         # Return observation as dict with desired_goal and achieved_goal
         obs_dict = self._build_observation_dict(obs)
