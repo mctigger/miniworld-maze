@@ -61,8 +61,8 @@ def benchmark_rendering_performance(
         # Create environment with specific observation size
         variant_mapping = {
             "NineRooms": "NineRooms-v0",
-            "SpiralNineRooms": "SpiralNineRooms-v0", 
-            "TwentyFiveRooms": "TwentyFiveRooms-v0"
+            "SpiralNineRooms": "SpiralNineRooms-v0",
+            "TwentyFiveRooms": "TwentyFiveRooms-v0",
         }
         env = gym.make(variant_mapping[variant], obs_width=size, obs_height=size)
 

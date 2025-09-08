@@ -381,22 +381,24 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
                     goal_positions.append([[center_x, 0.0, center_z]])
                 else:
                     # Two goals per room: center-left and center-right
-                    goal_positions.append([
-                        [center_x - 1.0, 0.0, center_z],  # left goal
-                        [center_x + 1.0, 0.0, center_z],  # right goal
-                    ])
+                    goal_positions.append(
+                        [
+                            [center_x - 1.0, 0.0, center_z],  # left goal
+                            [center_x + 1.0, 0.0, center_z],  # right goal
+                        ]
+                    )
         return goal_positions
 
     def get_extent(self, padding: float = 1.0) -> Tuple[float, float, float, float]:
         """
         Get the scene extent for use with matplotlib imshow.
-        
-        Returns the scene bounds with padding in the format expected by 
+
+        Returns the scene bounds with padding in the format expected by
         matplotlib's imshow(extent=...) parameter: (left, right, bottom, top).
-        
+
         Args:
             padding: Padding to add around environment bounds (default: 1.0)
-            
+
         Returns:
             Tuple[float, float, float, float]: (min_x, max_x, min_z, max_z) with padding
         """
@@ -404,7 +406,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             self.min_x - padding,
             self.max_x + padding,
             self.min_z - padding,
-            self.max_z + padding
+            self.max_z + padding,
         )
 
     def _build_observation_dict(self, obs: np.ndarray) -> dict:

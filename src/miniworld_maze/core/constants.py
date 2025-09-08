@@ -60,6 +60,7 @@ DEFAULT_WARMUP_STEPS: Final[int] = 10
 # TEXTURE THEMES
 # ========================
 
+
 class TextureThemes:
     """Pre-defined texture themes for different environments."""
 
@@ -114,7 +115,6 @@ class TextureThemes:
         "orange",
         "realblueberry",
     ]
-
 
 
 # ========================

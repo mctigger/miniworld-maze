@@ -9,29 +9,71 @@ import gymnasium as gym
 import numpy as np
 import pyglet
 from gymnasium import spaces
-from pyglet.gl import *
+from pyglet.gl import (
+    glEnable,
+    glDeleteLists,
+    glNewList,
+    glLightfv,
+    glShadeModel,
+    glColorMaterial,
+    glCallList,
+    glClearColor,
+    glClearDepth,
+    glClear,
+    glMatrixMode,
+    glLoadIdentity,
+    glOrtho,
+    glLoadMatrixf,
+    glDisable,
+    glBindFramebuffer,
+    glFlush,
+    glEndList,
+    gluPerspective,
+    gluLookAt,
+    GL_DEPTH_TEST,
+    GL_CULL_FACE,
+    GL_COMPILE,
+    GL_LIGHT0,
+    GL_POSITION,
+    GL_AMBIENT,
+    GL_DIFFUSE,
+    GL_SMOOTH,
+    GL_FRONT_AND_BACK,
+    GL_AMBIENT_AND_DIFFUSE,
+    GL_LIGHTING,
+    GL_COLOR_MATERIAL,
+    GL_COLOR_BUFFER_BIT,
+    GL_DEPTH_BUFFER_BIT,
+    GL_PROJECTION,
+    GL_MODELVIEW,
+    GL_TEXTURE_2D,
+    GL_FRAMEBUFFER,
+    GLubyte,
+    GLfloat,
+)
 
-from ..observation_types import ObservationLevel
-from .entities import *
-from .math import *
-from .objmesh import *
-from .occlusion_queries import OcclusionQueryManager
-from .opengl import *
-from .params import DEFAULT_PARAMS
-from .random import RandGen
-from .room import Room
+from miniworld_maze.core.observation_types import ObservationLevel
+from miniworld_maze.core.miniworld_gymnasium.entities import Entity, Agent
+from miniworld_maze.core.miniworld_gymnasium.math import Y_VEC, intersect_circle_segs
+from miniworld_maze.core.miniworld_gymnasium.occlusion_queries import (
+    OcclusionQueryManager,
+)
+from miniworld_maze.core.miniworld_gymnasium.opengl import Texture, FrameBuffer, drawBox
+from miniworld_maze.core.miniworld_gymnasium.params import DEFAULT_PARAMS
+from miniworld_maze.core.miniworld_gymnasium.random import RandGen
+from miniworld_maze.core.miniworld_gymnasium.room import Room
 
 # Optional architectural improvements
 try:
-    from .entity_manager import EntityManager
-    from .rendering_engine import RenderingEngine
+    from miniworld_maze.core.miniworld_gymnasium.entity_manager import EntityManager
+    from miniworld_maze.core.miniworld_gymnasium.rendering_engine import RenderingEngine
 
     ARCHITECTURAL_IMPROVEMENTS_AVAILABLE = True
 except ImportError:
     RenderingEngine = None
     EntityManager = None
     ARCHITECTURAL_IMPROVEMENTS_AVAILABLE = False
-from ..constants import (
+from miniworld_maze.core.constants import (
     CARRY_POSITION_OFFSET,
     DEFAULT_DISPLAY_WIDTH,
     DEFAULT_WINDOW_HEIGHT,
@@ -47,6 +89,7 @@ from ..constants import (
     ORTHOGRAPHIC_DEPTH_RANGE,
     PICKUP_RADIUS_MULTIPLIER,
     PICKUP_REACH_MULTIPLIER,
+    POMDP_VIEW_RADIUS,
     PORTAL_CONNECTION_TOLERANCE,
     TEXT_LABEL_WIDTH,
     TEXT_MARGIN_X,
@@ -363,8 +406,6 @@ class UnifiedMiniWorldEnv(gym.Env):
             render_agent: Whether to render the agent in the observation.
                          If None, uses default behavior based on observation level.
         """
-        # Import ObservationLevel here to avoid circular imports
-        from ..observation_types import ObservationLevel
 
         if observation_level == ObservationLevel.TOP_DOWN_PARTIAL:
             if self.agent_mode == "empty":
@@ -1039,9 +1080,6 @@ class UnifiedMiniWorldEnv(gym.Env):
     def _calculate_scene_extents(self, POMDP):
         """Calculate scene extents for rendering."""
         if POMDP:
-            # Import constants for POMDP view radius
-            from ..constants import POMDP_VIEW_RADIUS
-
             agent_x, _, agent_z = self.agent.pos
             min_x = agent_x - POMDP_VIEW_RADIUS
             max_x = agent_x + POMDP_VIEW_RADIUS
@@ -1287,9 +1325,6 @@ class UnifiedMiniWorldEnv(gym.Env):
         if view == "agent":
             img = self.render_obs(self.vis_fb)
         else:
-            # Import ObservationLevel here to avoid circular imports
-            from ..observation_types import ObservationLevel
-
             if self.obs_level == ObservationLevel.TOP_DOWN_PARTIAL:
                 img = self.render_top_view(self.vis_fb, POMDP=True)
             else:

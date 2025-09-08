@@ -29,7 +29,7 @@ def generate_observations(variant, output_dir=None, high_res_full_views=False):
     variant_mapping = {
         "NineRooms": "NineRooms-v0",
         "SpiralNineRooms": "SpiralNineRooms-v0",
-        "TwentyFiveRooms": "TwentyFiveRooms-v0"
+        "TwentyFiveRooms": "TwentyFiveRooms-v0",
     }
     env = gym.make(variant_mapping[variant], obs_width=64, obs_height=64)
 

@@ -121,7 +121,7 @@ class OpenCVLiveController:
         variant_mapping = {
             "NineRooms": "NineRooms-v0",
             "SpiralNineRooms": "SpiralNineRooms-v0",
-            "TwentyFiveRooms": "TwentyFiveRooms-v0"
+            "TwentyFiveRooms": "TwentyFiveRooms-v0",
         }
         self.env = gym.make(
             variant_mapping[variant],
@@ -215,7 +215,10 @@ class OpenCVLiveController:
         Returns:
             BGR image array for OpenCV or None if failed
         """
-        if self.current_info is not None and ObservationLevel.FIRST_PERSON in self.current_info:
+        if (
+            self.current_info is not None
+            and ObservationLevel.FIRST_PERSON in self.current_info
+        ):
             # Get first person observation from info
             obs_hwc = self.current_info[ObservationLevel.FIRST_PERSON]
 
@@ -253,8 +256,12 @@ class OpenCVLiveController:
             Map image with agent and goal markers
         """
         # Get positions from info dictionary - these are guaranteed to be available
-        agent_pos_2d = self.current_info["agent_position"]  # [x, z] coordinates as ndarray
-        goal_pos_2d = self.current_info["goal_position"]  # [x, z] coordinates as ndarray
+        agent_pos_2d = self.current_info[
+            "agent_position"
+        ]  # [x, z] coordinates as ndarray
+        goal_pos_2d = self.current_info[
+            "goal_position"
+        ]  # [x, z] coordinates as ndarray
 
         # Get environment bounds using utility function
         env_min_bounds, env_max_bounds = get_environment_bounds(self.map_env)
@@ -590,7 +597,7 @@ class OpenCVLiveController:
             ]
             if action < len(action_names):
                 print(
-                    f"🎯 {action_names[action]} | Reward: {reward:.2f} | "
+                    f"🎯 {action_names[action]} | Reward: {reward:.2f} | Success {self.current_info['success']} | "
                     f"Step: {self.step_count}"
                 )
 
