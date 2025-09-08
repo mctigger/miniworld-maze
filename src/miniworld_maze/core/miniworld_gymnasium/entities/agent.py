@@ -3,9 +3,9 @@
 import math
 
 import numpy as np
-from pyglet.gl import *
+from pyglet.gl import glBegin, glEnd, glVertex3f, glColor3f, GL_LINE_STRIP, GL_TRIANGLES
 
-from ..math import *
+from ..math import gen_rot_matrix, X_VEC, Y_VEC, Z_VEC
 from .base_entity import Entity
 
 
