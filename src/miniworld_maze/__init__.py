@@ -25,7 +25,7 @@ if "PYGLET_HEADLESS" not in os.environ:
         "Automatically set PYGLET_HEADLESS=1 for headless rendering. "
         "Set PYGLET_HEADLESS=0 before importing miniworld_maze to override this behavior.",
         UserWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
 from .core import ObservationLevel
@@ -33,10 +33,6 @@ from .environments.nine_rooms import NineRooms
 from .environments.spiral_nine_rooms import SpiralNineRooms
 from .environments.twenty_five_rooms import TwentyFiveRooms
 
-# Import factory to register environments
-from .environments import factory  # noqa: F401
-
-__version__ = "1.1.0"
 __all__ = [
     "NineRooms",
     "SpiralNineRooms",
