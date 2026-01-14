@@ -133,7 +133,6 @@ class UnifiedMiniWorldEnv(gym.Env):
         obs_level=3,
         continuous=False,
         agent_mode="circle",
-        max_episode_steps=1500,
         obs_width=80,
         obs_height=80,
         window_width=DEFAULT_WINDOW_WIDTH,
@@ -150,7 +149,6 @@ class UnifiedMiniWorldEnv(gym.Env):
             obs_level: Observation level (1=TOP_DOWN_PARTIAL, 2=TOP_DOWN_FULL, 3=FIRST_PERSON)
             continuous: Whether to use continuous actions
             agent_mode: Agent rendering mode ('triangle', 'circle', 'empty')
-            max_episode_steps: Maximum steps per episode
             obs_width: Observation width in pixels
             obs_height: Observation height in pixels
             window_width: Window width for human rendering
@@ -164,7 +162,6 @@ class UnifiedMiniWorldEnv(gym.Env):
         self.obs_level = obs_level
         self.agent_mode = agent_mode
         self.continuous = continuous
-        self.max_episode_steps = max_episode_steps
         self.params = params
         self.domain_rand = domain_rand
         self.info_obs = info_obs
@@ -634,23 +631,13 @@ class UnifiedMiniWorldEnv(gym.Env):
                 # Use the observation level enum as key
                 info[obs_level] = info_obs
 
-        # Check termination
-        if self.step_count >= self.max_episode_steps:
-            terminated = True
-            reward = 0
-            info.update(
-                {
-                    "pos": np.array([self.agent.pos[0], self.agent.pos[2]]),
-                }
-            )
-        else:
-            reward = 0
-            terminated = False
-            info.update(
-                {
-                    "pos": np.array([self.agent.pos[0], self.agent.pos[2]]),
-                }
-            )
+        reward = 0
+        terminated = False
+        info.update(
+            {
+                "pos": np.array([self.agent.pos[0], self.agent.pos[2]]),
+            }
+        )
 
         return reward, terminated, info
 
@@ -971,10 +958,6 @@ class UnifiedMiniWorldEnv(gym.Env):
     def _generate_world_layout(self, pos=None):
         """Generate the world layout. Derived classes must implement this method."""
         raise NotImplementedError
-
-    def _reward(self):
-        """Default sparse reward computation."""
-        return 1.0 - 0.2 * (self.step_count / self.max_episode_steps)
 
     def _render_static(self):
         """
