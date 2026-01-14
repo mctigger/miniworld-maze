@@ -17,7 +17,6 @@ from ..core.constants import (
     DEFAULT_OBS_HEIGHT,
     DEFAULT_OBS_WIDTH,
     DEFAULT_ROOM_SIZE,
-    MAX_EPISODE_STEPS,
     ROOM_BOUNDARY_MARGIN,
     ROOM_CENTER_FRACTION,
 )
@@ -117,7 +116,6 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
         super().__init__(
             obs_level=obs_level,
-            max_episode_steps=MAX_EPISODE_STEPS,
             continuous=continuous,
             agent_mode=self.agent_mode,
             obs_width=obs_width,

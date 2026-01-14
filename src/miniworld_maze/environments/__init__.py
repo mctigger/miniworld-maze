@@ -7,7 +7,7 @@ from miniworld_maze.environments.twenty_five_rooms import TwentyFiveRooms
 
 from gymnasium.envs.registration import register
 from miniworld_maze.core import ObservationLevel
-from miniworld_maze.core.constants import FACTORY_DOOR_SIZE, FACTORY_ROOM_SIZE
+from miniworld_maze.core.constants import FACTORY_DOOR_SIZE, FACTORY_ROOM_SIZE, MAX_EPISODE_STEPS
 
 __all__ = [
     "GridRoomsEnvironment",
@@ -20,7 +20,7 @@ __all__ = [
 register(
     id="NineRooms-v0",
     entry_point="miniworld_maze.environments.nine_rooms:NineRooms",
-    max_episode_steps=1000,
+    max_episode_steps=MAX_EPISODE_STEPS,
     kwargs={
         "room_size": FACTORY_ROOM_SIZE,
         "door_size": FACTORY_DOOR_SIZE,
@@ -32,7 +32,7 @@ register(
 register(
     id="SpiralNineRooms-v0",
     entry_point="miniworld_maze.environments.spiral_nine_rooms:SpiralNineRooms",
-    max_episode_steps=1000,
+    max_episode_steps=MAX_EPISODE_STEPS,
     kwargs={
         "room_size": FACTORY_ROOM_SIZE,
         "door_size": FACTORY_DOOR_SIZE,
@@ -44,7 +44,7 @@ register(
 register(
     id="TwentyFiveRooms-v0",
     entry_point="miniworld_maze.environments.twenty_five_rooms:TwentyFiveRooms",
-    max_episode_steps=1000,
+    max_episode_steps=MAX_EPISODE_STEPS,
     kwargs={
         "room_size": FACTORY_ROOM_SIZE,
         "door_size": FACTORY_DOOR_SIZE,
