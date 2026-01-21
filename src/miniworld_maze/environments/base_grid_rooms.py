@@ -332,7 +332,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
         return obs
 
-    def _is_goal_achieved(self, pos=None, threshold=0.5):
+    def _is_goal_achieved(self, pos=None, threshold=0.1):
         """
         Check if the agent has achieved the current goal.
 
@@ -349,10 +349,10 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         if not hasattr(self, "_current_goal_position"):
             return False
 
-        # Convert to numpy arrays and calculate distance
+        # Convert to numpy arrays and calculate L1 (Manhattan) distance
         pos_array = np.array(pos)
         goal_array = np.array(self._current_goal_position)
-        distance = np.linalg.norm(pos_array - goal_array)
+        distance = np.sum(np.abs(pos_array - goal_array))
 
         return bool(distance < threshold)
 

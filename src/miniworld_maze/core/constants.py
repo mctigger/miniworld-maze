@@ -7,8 +7,8 @@ from typing import Final
 # ========================
 
 # Default room and door sizes
-DEFAULT_ROOM_SIZE: Final[int] = 5
-DEFAULT_DOOR_SIZE: Final[int] = 2
+DEFAULT_ROOM_SIZE: Final[int] = 15
+DEFAULT_DOOR_SIZE: Final[float] = 2.5
 FACTORY_ROOM_SIZE: Final[int] = 15  # Used in factory for larger environments
 FACTORY_DOOR_SIZE: Final[float] = 2.5
 
@@ -89,6 +89,34 @@ class TextureThemes:
     ]
 
     TWENTY_FIVE_ROOMS = [
+        "crimson",
+        "beanpaste",
+        "cobaltgreen",
+        "lightnavyblue",
+        "skyblue",
+        "lightcobaltgreen",
+        "oakbrown",
+        "copperred",
+        "lightgray",
+        "lime",
+        "turquoise",
+        "violet",
+        "beige",
+        "morningglory",
+        "silver",
+        "magenta",
+        "sunnyyellow",
+        "blueberry",
+        "lightbeige",
+        "seablue",
+        "lemongrass",
+        "orchid",
+        "redbean",
+        "orange",
+        "realblueberry",
+    ]
+
+    SPIRAL_TWENTY_FIVE_ROOMS = [
         "crimson",
         "beanpaste",
         "cobaltgreen",

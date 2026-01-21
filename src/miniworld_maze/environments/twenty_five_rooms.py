@@ -1,5 +1,7 @@
 """TwentyFiveRooms environment implementation."""
 
+from typing import List, Union
+
 from ..core import ObservationLevel
 from ..core.constants import TextureThemes
 from .base_grid_rooms import GridRoomsEnvironment
@@ -29,8 +31,8 @@ class TwentyFiveRooms(GridRoomsEnvironment):
         placed_room=None,
         obs_level=ObservationLevel.TOP_DOWN_PARTIAL,
         continuous=False,
-        room_size=5,
-        door_size=2,
+        room_size=15,
+        door_size=2.5,
         agent_mode=None,
         obs_width=80,
         obs_height=80,
@@ -81,10 +83,9 @@ class TwentyFiveRooms(GridRoomsEnvironment):
         ]
         default_textures = TextureThemes.TWENTY_FIVE_ROOMS
 
-        # Initialize goal positions for each room (1 goal per room at center)
-        goal_positions = GridRoomsEnvironment._generate_goal_positions(
-            5, room_size, goals_per_room=1
-        )
+        # Initialize goal positions for each room (1 goal per room)
+        # Using the original drstrategy formula with -0.5 offset
+        goal_positions = self._generate_twenty_five_rooms_goal_positions(5, room_size)
 
         super().__init__(
             grid_size=5,
@@ -101,3 +102,42 @@ class TwentyFiveRooms(GridRoomsEnvironment):
             obs_height=obs_height,
             **kwargs,
         )
+
+    @staticmethod
+    def _generate_twenty_five_rooms_goal_positions(
+        grid_size: int, room_size: Union[int, float]
+    ) -> List[List[List[float]]]:
+        """
+        Generate goal positions matching the original drstrategy implementation.
+
+        Original formula from drstrategy/envs.py:
+        - Goal: [room_size*(j + 0.5) - 0.5, 0.0, room_size*(i + 0.5) - 0.5]
+
+        The offset (-0.5) is scaled proportionally with room_size to maintain
+        the same visual appearance across different room sizes.
+        Original was designed for room_size=15, so offset = 0.5/15 * room_size.
+
+        Args:
+            grid_size: Size of the grid (e.g., 5 for 5x5)
+            room_size: Size of each room
+
+        Returns:
+            List of goal positions for each room (1 goal per room)
+        """
+        goal_positions = []
+        # Scale the offset proportionally (original: 0.5 for room_size=15)
+        offset = 0.5 / 15.0 * room_size
+
+        for i in range(grid_size):  # rows
+            for j in range(grid_size):  # columns
+                goal_positions.append(
+                    [
+                        # Single goal near center with small offset
+                        [
+                            room_size * (j + 0.5) - offset,
+                            0.0,
+                            room_size * (i + 0.5) - offset,
+                        ],
+                    ]
+                )
+        return goal_positions

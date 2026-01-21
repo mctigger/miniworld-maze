@@ -32,10 +32,12 @@ from .core import ObservationLevel
 from .environments.nine_rooms import NineRooms
 from .environments.spiral_nine_rooms import SpiralNineRooms
 from .environments.twenty_five_rooms import TwentyFiveRooms
+from .environments.spiral_twenty_five_rooms import SpiralTwentyFiveRooms
 
 __all__ = [
     "NineRooms",
     "SpiralNineRooms",
     "TwentyFiveRooms",
+    "SpiralTwentyFiveRooms",
     "ObservationLevel",
 ]
