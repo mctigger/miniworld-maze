@@ -82,9 +82,8 @@ class NineRooms(GridRoomsEnvironment):
         - Goal 1: [room_size*(j + 0.5) - 0.5, 0.0, room_size*(i + 0.5) - 0.5]
         - Goal 2: [room_size*(j + 0.3) - 0.5, 0.0, room_size*(i + 0.7) - 0.5]
 
-        The offset (-0.5) is scaled proportionally with room_size to maintain
-        the same visual appearance across different room sizes.
-        Original was designed for room_size=15, so offset = 0.5/15 * room_size.
+        The offset is a fixed -0.5 value as per the original implementation,
+        regardless of room_size.
 
         Args:
             grid_size: Size of the grid (e.g., 3 for 3x3)
@@ -94,8 +93,8 @@ class NineRooms(GridRoomsEnvironment):
             List of goal positions for each room
         """
         goal_positions = []
-        # Scale the offset proportionally (original: 0.5 for room_size=15)
-        offset = 0.5 / 15.0 * room_size
+        # Fixed offset matching original drstrategy implementation
+        offset = 0.5
 
         for i in range(grid_size):  # rows
             for j in range(grid_size):  # columns
