@@ -3,6 +3,7 @@
 from ..core import ObservationLevel
 from ..core.constants import TextureThemes
 from .base_grid_rooms import GridRoomsEnvironment
+from .nine_rooms import NineRooms
 
 
 class SpiralNineRooms(GridRoomsEnvironment):
@@ -46,9 +47,8 @@ class SpiralNineRooms(GridRoomsEnvironment):
         default_textures = TextureThemes.SPIRAL_NINE_ROOMS
 
         # Initialize goal positions for each room (2 goals per room)
-        goal_positions = GridRoomsEnvironment._generate_goal_positions(
-            3, room_size, goals_per_room=2
-        )
+        # Using the same formula as NineRooms to match original drstrategy
+        goal_positions = NineRooms._generate_nine_rooms_goal_positions(3, room_size)
 
         super().__init__(
             grid_size=3,

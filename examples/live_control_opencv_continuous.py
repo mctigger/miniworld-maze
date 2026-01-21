@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """
-OpenCV-based dual-view live keyboard control for Nine Rooms environments.
+OpenCV-based dual-view live keyboard control for Nine Rooms environments (Continuous Control).
 Shows ego view and top-down map side by side with agent position tracking.
 Avoids OpenGL conflicts by using OpenCV for display instead of pygame.
 
 Controls:
-    W/A/S/D - Move forward/turn left/move backward/turn right
-    SPACE   - Pick up object
-    X       - Drop object
-    E       - Toggle/activate object
+    W       - Move forward
+    S       - Move backward
+    A       - Turn left
+    D       - Turn right
+    Q       - Move forward + Turn left
+    E       - Move forward + Turn right
     R       - Reset environment
-    ESC/Q   - Quit
+    ESC     - Quit
     1/2/3   - Switch between environment variants
 
 Features:
+    - Continuous action space control
     - Dual synchronized views: ego view (configurable) + top-down map
     - Real-time agent position tracking on the map
     - Both environments stay perfectly synchronized
@@ -41,8 +44,8 @@ from miniworld_maze.utils import (
 OPENCV_AVAILABLE = True
 
 
-class OpenCVLiveController:
-    """Live environment controller using OpenCV for display."""
+class OpenCVLiveControllerContinuous:
+    """Live environment controller using OpenCV for display with continuous actions."""
 
     def __init__(
         self,
@@ -74,15 +77,17 @@ class OpenCVLiveController:
             self.variants.index(variant) if variant in self.variants else 0
         )
 
-        # Action mapping for keyboard
+        # Action mapping for keyboard (Continuous)
+        # Format: [forward_speed, turn_speed]
+        # forward_speed: [-1, 1]
+        # turn_speed: [-1, 1] (scaled by 15 degrees in env)
         self.action_map = {
-            ord("w"): 2,  # move_forward
-            ord("s"): 3,  # move_back
-            ord("a"): 0,  # turn_left
-            ord("d"): 1,  # turn_right
-            ord(" "): 4,  # pickup (space)
-            ord("x"): 5,  # drop
-            ord("e"): 6,  # toggle
+            ord("w"): np.array([0.4, 0.0], dtype=np.float32),  # Move forward
+            ord("s"): np.array([-0.4, 0.0], dtype=np.float32),  # Move backward
+            ord("a"): np.array([0.0, 1.0], dtype=np.float32),  # Turn left
+            ord("d"): np.array([0.0, -1.0], dtype=np.float32),  # Turn right
+            ord("q"): np.array([0.4, 1.0], dtype=np.float32),  # Forward + Left
+            ord("e"): np.array([0.4, -1.0], dtype=np.float32),  # Forward + Right
         }
 
         # Stats
@@ -112,7 +117,7 @@ class OpenCVLiveController:
         if self.env:
             self.env.close()
 
-        print(f"🔄 Creating {variant} environment...")
+        print(f"🔄 Creating {variant} environment (Continuous)...")
 
         # Create environment with all needed observation types via info_obs
         variant_mapping = {
@@ -126,6 +131,7 @@ class OpenCVLiveController:
             obs_height=self.size,
             obs_level=self.obs_level,
             agent_mode="triangle",  # Make agent visible for better demo
+            continuous=True,  # Enable continuous actions
             info_obs=[ObservationLevel.FIRST_PERSON, ObservationLevel.TOP_DOWN_FULL],
         )
 
@@ -224,6 +230,9 @@ class OpenCVLiveController:
         Returns:
             BGR image array for OpenCV or None if failed
         """
+        if self.current_map_obs is None:
+            return self._create_placeholder("No Map View")
+
         # Use current map observation with manual overlay
         obs_hwc = self.current_map_obs  # Already in HWC format
         obs_bgr = cv2.cvtColor(obs_hwc, cv2.COLOR_RGB2BGR)
@@ -240,13 +249,19 @@ class OpenCVLiveController:
         Returns:
             Map image with agent and goal markers
         """
+        if self.current_info is None or self.env is None:
+            return map_image
+
         # Get positions from info dictionary - these are guaranteed to be available
-        agent_pos_2d = self.current_info[
+        agent_pos_2d = self.current_info.get(
             "agent_position"
-        ]  # [x, z] coordinates as ndarray
-        goal_pos_2d = self.current_info[
+        )  # [x, z] coordinates as ndarray
+        goal_pos_2d = self.current_info.get(
             "goal_position"
-        ]  # [x, z] coordinates as ndarray
+        )  # [x, z] coordinates as ndarray
+
+        if agent_pos_2d is None or goal_pos_2d is None:
+            return map_image
 
         # Get environment bounds using utility function
         env_min_bounds, env_max_bounds = get_environment_bounds(self.env)
@@ -295,26 +310,27 @@ class OpenCVLiveController:
         # Draw direction indicator
         # Get base environment for agent direction
         base_env = self.env.unwrapped
-        agent_dir = base_env.agent.dir
-        dir_length = agent_radius + 8
-        end_x = int(pixel_x + dir_length * math.cos(agent_dir))
-        end_z = int(pixel_z + dir_length * math.sin(agent_dir))
+        if hasattr(base_env, "agent"):
+            agent_dir = base_env.agent.dir
+            dir_length = agent_radius + 8
+            end_x = int(pixel_x + dir_length * math.cos(agent_dir))
+            end_z = int(pixel_z + dir_length * math.sin(agent_dir))
 
-        # Draw direction line
-        cv2.line(
-            marked_image, (pixel_x, pixel_z), (end_x, end_z), (0, 255, 0), 3
-        )  # Green direction line
+            # Draw direction line
+            cv2.line(
+                marked_image, (pixel_x, pixel_z), (end_x, end_z), (0, 255, 0), 3
+            )  # Green direction line
 
-        # Draw arrowhead
-        arrow_size = 5
-        arrow_angle = 0.5  # radians
-        left_x = int(end_x - arrow_size * math.cos(agent_dir - arrow_angle))
-        left_z = int(end_z - arrow_size * math.sin(agent_dir - arrow_angle))
-        right_x = int(end_x - arrow_size * math.cos(agent_dir + arrow_angle))
-        right_z = int(end_z - arrow_size * math.sin(agent_dir + arrow_angle))
+            # Draw arrowhead
+            arrow_size = 5
+            arrow_angle = 0.5  # radians
+            left_x = int(end_x - arrow_size * math.cos(agent_dir - arrow_angle))
+            left_z = int(end_z - arrow_size * math.sin(agent_dir - arrow_angle))
+            right_x = int(end_x - arrow_size * math.cos(agent_dir + arrow_angle))
+            right_z = int(end_z - arrow_size * math.sin(agent_dir + arrow_angle))
 
-        cv2.line(marked_image, (end_x, end_z), (left_x, left_z), (0, 255, 0), 2)
-        cv2.line(marked_image, (end_x, end_z), (right_x, right_z), (0, 255, 0), 2)
+            cv2.line(marked_image, (end_x, end_z), (left_x, left_z), (0, 255, 0), 2)
+            cv2.line(marked_image, (end_x, end_z), (right_x, right_z), (0, 255, 0), 2)
 
         return marked_image
 
@@ -473,7 +489,7 @@ class OpenCVLiveController:
         font_scale = 0.6
         cv2.putText(
             combined_img,
-            f"Environment: {self.current_variant}",
+            f"Environment: {self.current_variant} (Continuous)",
             (10, info_y),
             font,
             font_scale,
@@ -495,8 +511,8 @@ class OpenCVLiveController:
         font_scale_small = 0.5
         controls_y = info_y + 55
         controls = [
-            "CONTROLS: W/A/S/D=Move/Turn, SPACE=Pickup, X=Drop, E=Toggle, "
-            "R=Reset, 1/2/3=Switch Env, ESC/Q=Quit"
+            "CONTROLS: W/S=Move Fwd/Back, A/D=Turn Left/Right, Q/E=Fwd+Turn, "
+            "R=Reset, 1/2/3=Switch Env, ESC=Quit"
         ]
 
         for i, control in enumerate(controls):
@@ -522,7 +538,7 @@ class OpenCVLiveController:
         Returns:
             True to continue, False to quit
         """
-        if key == 27 or key == ord("q"):  # ESC or Q
+        if key == 27:  # ESC
             return False
 
         elif key == ord("r"):
@@ -567,20 +583,10 @@ class OpenCVLiveController:
             self.step_count += 1
 
             # Print action feedback
-            action_names = [
-                "turn_left",
-                "turn_right",
-                "move_forward",
-                "move_back",
-                "pickup",
-                "drop",
-                "toggle",
-            ]
-            if action < len(action_names):
-                print(
-                    f"🎯 {action_names[action]} | Reward: {reward:.2f} | Success {self.current_info['success']} | "
-                    f"Step: {self.step_count}"
-                )
+            print(
+                f"🎯 Action: {action} | Reward: {reward:.2f} | Success {self.current_info['success']} | "
+                f"Step: {self.step_count}"
+            )
 
             if terminated or truncated:
                 print(f"🏁 Episode ended! Reward: {reward:.2f}")
@@ -609,7 +615,7 @@ class OpenCVLiveController:
 
     def run(self):
         """Main run loop."""
-        print("🎮 Nine Rooms OpenCV Live Controller")
+        print("🎮 Nine Rooms OpenCV Live Controller (Continuous)")
         print("=" * 50)
 
         print("🔄 Step 1: Creating environment...")
@@ -621,18 +627,17 @@ class OpenCVLiveController:
         print("✅ Step 1 completed: Environment created")
 
         print("\n📖 Controls:")
-        print("   W/A/S/D - Move forward/turn left/move backward/turn right")
-        print("   SPACE - Pick up object")
-        print("   X - Drop object")
-        print("   E - Toggle/activate object")
+        print("   W/S - Move forward/backward")
+        print("   A/D - Turn left/right")
+        print("   Q/E - Move forward + Turn left/right")
         print("   R - Reset environment")
         print("   1/2/3 - Switch between environment variants")
-        print("   ESC/Q - Quit")
+        print("   ESC - Quit")
         print("\n👀 OpenCV window will open - click on it to focus for keyboard input!")
         print("🔍 If window doesn't appear, try running with: DISPLAY=:0 python ...")
 
         # Create window
-        window_name = "Nine Rooms Live Control (OpenCV)"
+        window_name = "Nine Rooms Live Control (OpenCV Continuous)"
         print(f"📺 Creating OpenCV window: {window_name}")
         cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
         print("✅ Window created successfully")
@@ -680,7 +685,7 @@ def main():
         return
 
     parser = argparse.ArgumentParser(
-        description="OpenCV live control for Nine Rooms environments"
+        description="OpenCV live control for Nine Rooms environments (Continuous)"
     )
     parser.add_argument(
         "--variant",
@@ -708,7 +713,7 @@ def main():
     }
     obs_level = obs_level_map[args.obs_level]
 
-    controller = OpenCVLiveController(
+    controller = OpenCVLiveControllerContinuous(
         variant=args.variant, size=args.size, obs_level=obs_level
     )
     controller.run()

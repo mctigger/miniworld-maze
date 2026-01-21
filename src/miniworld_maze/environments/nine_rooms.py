@@ -1,5 +1,7 @@
 """NineRooms environment implementation."""
 
+from typing import List, Union
+
 from ..core import ObservationLevel
 from ..core.constants import TextureThemes
 from .base_grid_rooms import GridRoomsEnvironment
@@ -50,9 +52,8 @@ class NineRooms(GridRoomsEnvironment):
         default_textures = TextureThemes.NINE_ROOMS
 
         # Initialize goal positions for each room (2 goals per room)
-        goal_positions = GridRoomsEnvironment._generate_goal_positions(
-            3, room_size, goals_per_room=2
-        )
+        # Using the original drstrategy formula
+        goal_positions = self._generate_nine_rooms_goal_positions(3, room_size)
 
         super().__init__(
             grid_size=3,
@@ -69,3 +70,49 @@ class NineRooms(GridRoomsEnvironment):
             obs_height=obs_height,
             **kwargs,
         )
+
+    @staticmethod
+    def _generate_nine_rooms_goal_positions(
+        grid_size: int, room_size: Union[int, float]
+    ) -> List[List[List[float]]]:
+        """
+        Generate goal positions matching the original drstrategy implementation.
+
+        Original formula from drstrategy/envs.py:
+        - Goal 1: [room_size*(j + 0.5) - 0.5, 0.0, room_size*(i + 0.5) - 0.5]
+        - Goal 2: [room_size*(j + 0.3) - 0.5, 0.0, room_size*(i + 0.7) - 0.5]
+
+        The offset (-0.5) is scaled proportionally with room_size to maintain
+        the same visual appearance across different room sizes.
+        Original was designed for room_size=15, so offset = 0.5/15 * room_size.
+
+        Args:
+            grid_size: Size of the grid (e.g., 3 for 3x3)
+            room_size: Size of each room
+
+        Returns:
+            List of goal positions for each room
+        """
+        goal_positions = []
+        # Scale the offset proportionally (original: 0.5 for room_size=15)
+        offset = 0.5 / 15.0 * room_size
+
+        for i in range(grid_size):  # rows
+            for j in range(grid_size):  # columns
+                goal_positions.append(
+                    [
+                        # Goal 1: near center with small offset
+                        [
+                            room_size * (j + 0.5) - offset,
+                            0.0,
+                            room_size * (i + 0.5) - offset,
+                        ],
+                        # Goal 2: asymmetric position (0.3, 0.7 of room)
+                        [
+                            room_size * (j + 0.3) - offset,
+                            0.0,
+                            room_size * (i + 0.7) - offset,
+                        ],
+                    ]
+                )
+        return goal_positions
