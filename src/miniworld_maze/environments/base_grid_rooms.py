@@ -86,6 +86,9 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         # Set goal positions
         self.goal_positions = goal_positions
 
+        # Track position in goal sequence for sequential selection
+        self._goal_sequence_index = 0
+
         # Set placed room
         if placed_room is None:
             self.placed_room = 0  # Start in the first room
@@ -281,16 +284,26 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
     def _get_goal(self):
         """
-        Generate a goal by randomly selecting a room and goal position.
+        Generate a goal by selecting the next position in sequence.
+        Cycles through all rooms and goals in order.
 
         Returns:
             np.ndarray: Rendered goal image
         """
-        # Select random room
-        room_idx = np.random.randint(len(self.goal_positions))
+        # Calculate total goals and flatten index to room/goal indices
+        total_goals = sum(len(goals) for goals in self.goal_positions)
+        flat_idx = self._goal_sequence_index % total_goals
 
-        # Select random goal within room
-        goal_idx = np.random.randint(len(self.goal_positions[room_idx]))
+        # Convert flat index to room_idx and goal_idx
+        cumulative = 0
+        for room_idx, room_goals in enumerate(self.goal_positions):
+            if cumulative + len(room_goals) > flat_idx:
+                goal_idx = flat_idx - cumulative
+                break
+            cumulative += len(room_goals)
+
+        # Increment for next call
+        self._goal_sequence_index += 1
 
         # Get goal position
         goal_position = self.goal_positions[room_idx][goal_idx]
