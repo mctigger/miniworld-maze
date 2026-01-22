@@ -197,9 +197,10 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
                     box_col = box_index % BOX_GRID_SIZE
 
                     # Calculate unique color index for variety
+                    # Use %9 to match original drstrategy implementation
                     color_index = (
                         box_index + 1 + (room_row + 1) * (room_col + 1)
-                    ) % num_colors
+                    ) % 9
                     box_color = available_colors[color_index]
 
                     # Calculate box position within room
