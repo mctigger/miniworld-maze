@@ -64,6 +64,10 @@ DEFAULT_WARMUP_STEPS: Final[int] = 10
 class TextureThemes:
     """Pre-defined texture themes for different environments."""
 
+    ONE_ROOM = ["beige"]
+
+    FOUR_ROOMS = ["beige", "lightbeige", "lightgray", "copperred"]
+
     NINE_ROOMS = [
         "beige",
         "lightbeige",

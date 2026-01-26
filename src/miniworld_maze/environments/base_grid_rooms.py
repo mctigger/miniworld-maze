@@ -73,7 +73,9 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         self.total_rooms = self.grid_size * self.grid_size
 
         # Validate and set connections
-        assert len(connections) > 0, "Connection between rooms should be more than 1"
+        # Single room environments (grid_size=1) don't need connections
+        if self.total_rooms > 1:
+            assert len(connections) > 0, "Connection between rooms should be more than 1"
         self.connections = connections
 
         # Validate and set textures

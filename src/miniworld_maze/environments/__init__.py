@@ -1,6 +1,8 @@
 """Nine Rooms environment implementations."""
 
 from miniworld_maze.environments.base_grid_rooms import GridRoomsEnvironment
+from miniworld_maze.environments.one_room import OneRoom
+from miniworld_maze.environments.four_rooms import FourRooms
 from miniworld_maze.environments.nine_rooms import NineRooms
 from miniworld_maze.environments.spiral_nine_rooms import SpiralNineRooms
 from miniworld_maze.environments.twenty_five_rooms import TwentyFiveRooms
@@ -12,6 +14,8 @@ from miniworld_maze.core.constants import FACTORY_DOOR_SIZE, FACTORY_ROOM_SIZE, 
 
 __all__ = [
     "GridRoomsEnvironment",
+    "OneRoom",
+    "FourRooms",
     "NineRooms",
     "SpiralNineRooms",
     "TwentyFiveRooms",
@@ -19,6 +23,30 @@ __all__ = [
 ]
 
 # Register environment variants with factory defaults matching the original wrapper
+register(
+    id="OneRoom-v0",
+    entry_point="miniworld_maze.environments.one_room:OneRoom",
+    max_episode_steps=MAX_EPISODE_STEPS,
+    kwargs={
+        "room_size": FACTORY_ROOM_SIZE,
+        "door_size": FACTORY_DOOR_SIZE,
+        "obs_level": ObservationLevel.TOP_DOWN_PARTIAL,
+        "agent_mode": None,
+    },
+)
+
+register(
+    id="FourRooms-v0",
+    entry_point="miniworld_maze.environments.four_rooms:FourRooms",
+    max_episode_steps=MAX_EPISODE_STEPS,
+    kwargs={
+        "room_size": FACTORY_ROOM_SIZE,
+        "door_size": FACTORY_DOOR_SIZE,
+        "obs_level": ObservationLevel.TOP_DOWN_PARTIAL,
+        "agent_mode": None,
+    },
+)
+
 register(
     id="NineRooms-v0",
     entry_point="miniworld_maze.environments.nine_rooms:NineRooms",
