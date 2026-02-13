@@ -36,6 +36,7 @@ class TwentyFiveRooms(GridRoomsEnvironment):
         agent_mode=None,
         obs_width=80,
         obs_height=80,
+        goal_threshold=0.1,
         **kwargs,
     ):
         # Default configuration for TwentyFiveRooms
@@ -100,6 +101,7 @@ class TwentyFiveRooms(GridRoomsEnvironment):
             agent_mode=agent_mode,
             obs_width=obs_width,
             obs_height=obs_height,
+            goal_threshold=goal_threshold,
             **kwargs,
         )
 

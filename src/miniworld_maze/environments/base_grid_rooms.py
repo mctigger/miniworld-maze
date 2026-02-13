@@ -46,6 +46,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         obs_width: int = DEFAULT_OBS_WIDTH,
         obs_height: int = DEFAULT_OBS_HEIGHT,
         render_mode=None,
+        goal_threshold: float = 0.1,
         **kwargs,
     ):
         """
@@ -65,8 +66,12 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             obs_width: Observation width in pixels (defaults to DEFAULT_OBS_WIDTH)
             obs_height: Observation height in pixels (defaults to DEFAULT_OBS_HEIGHT)
             render_mode: Render mode ("human", "rgb_array", or None)
+            goal_threshold: Distance threshold for goal achievement (defaults to 0.1)
             **kwargs: Additional arguments passed to parent class
         """
+
+        # Set goal threshold
+        self.goal_threshold = goal_threshold
 
         # Set grid configuration
         self.grid_size = grid_size
@@ -249,6 +254,9 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         goal_pos = self._current_goal_position
         info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z
 
+        # Add distance to goal (L1, same metric used for goal achievement check)
+        info["distance_to_goal"] = np.sum(np.abs(np.array(agent_pos) - np.array(goal_pos)))
+
         # Return observation as dict
         obs_dict = self._build_observation_dict(obs)
         return obs_dict, reward, terminated, truncated, info
@@ -348,7 +356,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
         return obs
 
-    def _is_goal_achieved(self, pos=None, threshold=0.1):
+    def _is_goal_achieved(self, pos=None, threshold=None):
         """
         Check if the agent has achieved the current goal.
 
@@ -359,6 +367,9 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         Returns:
             bool: True if goal is achieved
         """
+        if threshold is None:
+            threshold = self.goal_threshold
+
         if pos is None:
             pos = self.agent.pos
 

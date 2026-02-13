@@ -52,6 +52,7 @@ class OpenCVLiveControllerContinuous:
         variant: str = "NineRooms",
         size: int = 256,
         obs_level: ObservationLevel = ObservationLevel.TOP_DOWN_PARTIAL,
+        goal_threshold: float = 0.1,
     ):
         """
         Initialize the OpenCV live controller.
@@ -60,10 +61,12 @@ class OpenCVLiveControllerContinuous:
             variant: Environment variant to start with
             size: Observation image size
             obs_level: Observation level (FIRST_PERSON, TOP_DOWN_PARTIAL, TOP_DOWN_FULL)
+            goal_threshold: Goal-reaching distance threshold
         """
         self.size = size
         self.current_variant = variant
         self.obs_level = obs_level
+        self.goal_threshold = goal_threshold
         self.env = None  # Main environment
         self.current_obs = None
         self.current_map_obs = None
@@ -132,6 +135,7 @@ class OpenCVLiveControllerContinuous:
             obs_level=self.obs_level,
             agent_mode="triangle",  # Make agent visible for better demo
             continuous=True,  # Enable continuous actions
+            goal_threshold=self.goal_threshold,
             info_obs=[ObservationLevel.FIRST_PERSON, ObservationLevel.TOP_DOWN_FULL],
         )
 
@@ -585,7 +589,7 @@ class OpenCVLiveControllerContinuous:
             # Print action feedback
             print(
                 f"🎯 Action: {action} | Reward: {reward:.2f} | Success {self.current_info['success']} | "
-                f"Step: {self.step_count}"
+                f"Step: {self.step_count} | Dist: {info['distance_to_goal']:.4f}"
             )
 
             if terminated or truncated:
@@ -702,6 +706,12 @@ def main():
         default="TOP_DOWN_PARTIAL",
         help="Observation level (default: TOP_DOWN_PARTIAL)",
     )
+    parser.add_argument(
+        "--goal-threshold",
+        type=float,
+        default=0.1,
+        help="Goal-reaching distance threshold (default: 0.1)",
+    )
 
     args = parser.parse_args()
 
@@ -714,7 +724,7 @@ def main():
     obs_level = obs_level_map[args.obs_level]
 
     controller = OpenCVLiveControllerContinuous(
-        variant=args.variant, size=args.size, obs_level=obs_level
+        variant=args.variant, size=args.size, obs_level=obs_level, goal_threshold=args.goal_threshold
     )
     controller.run()
 
