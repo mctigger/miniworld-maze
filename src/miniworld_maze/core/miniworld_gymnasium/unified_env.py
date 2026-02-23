@@ -295,8 +295,38 @@ class UnifiedMiniWorldEnv(gym.Env):
         self.reset()
 
     def close(self):
-        """Clean up resources."""
-        pass
+        """Clean up GPU resources, windows, and display lists."""
+        # Clean up framebuffers
+        for fb in (self.obs_fb, self.vis_fb, self.topdown_fb):
+            if fb is not None:
+                fb.cleanup()
+
+        # Clean up rendering engine if available
+        if getattr(self, "rendering_engine", None) is not None and hasattr(
+            self.rendering_engine, "cleanup"
+        ):
+            self.rendering_engine.cleanup()
+
+        # Delete the static display list
+        glDeleteLists(1, 1)
+
+        # Close windows
+        if getattr(self, "shadow_window", None) is not None:
+            self.shadow_window.close()
+            self.shadow_window = None
+
+        if getattr(self, "window", None) is not None:
+            self.window.close()
+            self.window = None
+
+        super().close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
     def seed(self, seed=None):
         """Set random seed."""

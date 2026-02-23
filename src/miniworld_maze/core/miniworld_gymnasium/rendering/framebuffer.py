@@ -32,6 +32,7 @@ class FrameBuffer:
 
         self.width = width
         self.height = height
+        self._cleaned_up = False
 
         # Create a frame buffer (rendering target)
         self.multi_fbo = GLuint(0)
@@ -56,9 +57,9 @@ class FrameBuffer:
                 num_samples = max_samples
 
             # Create a multisampled texture to render into
-            fbTex = GLuint(0)
-            glGenTextures(1, byref(fbTex))
-            glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fbTex)
+            self.multi_tex = GLuint(0)
+            glGenTextures(1, byref(self.multi_tex))
+            glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, self.multi_tex)
             glTexImage2DMultisample(
                 GL_TEXTURE_2D_MULTISAMPLE, num_samples, GL_RGBA32F, width, height, True
             )
@@ -66,19 +67,19 @@ class FrameBuffer:
                 GL_FRAMEBUFFER,
                 GL_COLOR_ATTACHMENT0,
                 GL_TEXTURE_2D_MULTISAMPLE,
-                fbTex,
+                self.multi_tex,
                 0,
             )
 
             # Attach a multisampled depth buffer to the FBO
-            depth_rb = GLuint(0)
-            glGenRenderbuffers(1, byref(depth_rb))
-            glBindRenderbuffer(GL_RENDERBUFFER, depth_rb)
+            self.multi_depth_rb = GLuint(0)
+            glGenRenderbuffers(1, byref(self.multi_depth_rb))
+            glBindRenderbuffer(GL_RENDERBUFFER, self.multi_depth_rb)
             glRenderbufferStorageMultisample(
                 GL_RENDERBUFFER, num_samples, GL_DEPTH_COMPONENT16, width, height
             )
             glFramebufferRenderbuffer(
-                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb
+                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, self.multi_depth_rb
             )
 
             # Check that the frame buffer creation succeeded
@@ -89,23 +90,23 @@ class FrameBuffer:
             print("Falling back to non-multisampled frame buffer")
 
             # Create a plain texture texture to render into
-            fbTex = GLuint(0)
-            glGenTextures(1, byref(fbTex))
-            glBindTexture(GL_TEXTURE_2D, fbTex)
+            self.multi_tex = GLuint(0)
+            glGenTextures(1, byref(self.multi_tex))
+            glBindTexture(GL_TEXTURE_2D, self.multi_tex)
             glTexImage2D(
                 GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None
             )
             glFramebufferTexture2D(
-                GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbTex, 0
+                GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.multi_tex, 0
             )
 
             # Attach depth buffer to FBO
-            depth_rb = GLuint(0)
-            glGenRenderbuffers(1, byref(depth_rb))
-            glBindRenderbuffer(GL_RENDERBUFFER, depth_rb)
+            self.multi_depth_rb = GLuint(0)
+            glGenRenderbuffers(1, byref(self.multi_depth_rb))
+            glBindRenderbuffer(GL_RENDERBUFFER, self.multi_depth_rb)
             glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height)
             glFramebufferRenderbuffer(
-                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb
+                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, self.multi_depth_rb
             )
 
         # Sanity check
@@ -118,23 +119,23 @@ class FrameBuffer:
         glBindFramebuffer(GL_FRAMEBUFFER, self.final_fbo)
 
         # Create the texture used to resolve the final render
-        fbTex = GLuint(0)
-        glGenTextures(1, byref(fbTex))
-        glBindTexture(GL_TEXTURE_2D, fbTex)
+        self.final_tex = GLuint(0)
+        glGenTextures(1, byref(self.final_tex))
+        glBindTexture(GL_TEXTURE_2D, self.final_tex)
         glTexImage2D(
             GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None
         )
         glFramebufferTexture2D(
-            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbTex, 0
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.final_tex, 0
         )
 
         # Create a depth buffer for the final frame buffer
-        depth_rb = GLuint(0)
-        glGenRenderbuffers(1, byref(depth_rb))
-        glBindRenderbuffer(GL_RENDERBUFFER, depth_rb)
+        self.final_depth_rb = GLuint(0)
+        glGenRenderbuffers(1, byref(self.final_depth_rb))
+        glBindRenderbuffer(GL_RENDERBUFFER, self.final_depth_rb)
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height)
         glFramebufferRenderbuffer(
-            GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb
+            GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, self.final_depth_rb
         )
 
         # Sanity check
@@ -150,6 +151,19 @@ class FrameBuffer:
         # Array to render the image into (for observation rendering)
         # The array is stored in column-major order
         self.img_array = np.zeros(shape=(height, width, 3), dtype=np.uint8)
+
+    def cleanup(self):
+        """Delete all GPU resources owned by this framebuffer."""
+        if self._cleaned_up:
+            return
+        self._cleaned_up = True
+
+        glDeleteFramebuffers(1, byref(self.multi_fbo))
+        glDeleteFramebuffers(1, byref(self.final_fbo))
+        glDeleteTextures(1, byref(self.multi_tex))
+        glDeleteTextures(1, byref(self.final_tex))
+        glDeleteRenderbuffers(1, byref(self.multi_depth_rb))
+        glDeleteRenderbuffers(1, byref(self.final_depth_rb))
 
     def bind(self):
         """
