@@ -85,12 +85,12 @@ class OpenCVLiveControllerContinuous:
         # forward_speed: [-1, 1]
         # turn_speed: [-1, 1] (scaled by 15 degrees in env)
         self.action_map = {
-            ord("w"): np.array([0.4, 0.0], dtype=np.float32),  # Move forward
-            ord("s"): np.array([-0.4, 0.0], dtype=np.float32),  # Move backward
+            ord("w"): np.array([1.0, 0.0], dtype=np.float32),  # Move forward
+            ord("s"): np.array([-1.0, 0.0], dtype=np.float32),  # Move backward
             ord("a"): np.array([0.0, 1.0], dtype=np.float32),  # Turn left
             ord("d"): np.array([0.0, -1.0], dtype=np.float32),  # Turn right
-            ord("q"): np.array([0.4, 1.0], dtype=np.float32),  # Forward + Left
-            ord("e"): np.array([0.4, -1.0], dtype=np.float32),  # Forward + Right
+            ord("q"): np.array([1.0, 1.0], dtype=np.float32),  # Forward + Left
+            ord("e"): np.array([1.0, -1.0], dtype=np.float32),  # Forward + Right
         }
 
         # Stats
@@ -136,6 +136,7 @@ class OpenCVLiveControllerContinuous:
             agent_mode="triangle",  # Make agent visible for better demo
             continuous=True,  # Enable continuous actions
             goal_threshold=self.goal_threshold,
+            move_scale=0.1,
             info_obs=[ObservationLevel.FIRST_PERSON, ObservationLevel.TOP_DOWN_FULL],
         )
 
@@ -724,7 +725,10 @@ def main():
     obs_level = obs_level_map[args.obs_level]
 
     controller = OpenCVLiveControllerContinuous(
-        variant=args.variant, size=args.size, obs_level=obs_level, goal_threshold=args.goal_threshold
+        variant=args.variant,
+        size=args.size,
+        obs_level=obs_level,
+        goal_threshold=args.goal_threshold,
     )
     controller.run()
 

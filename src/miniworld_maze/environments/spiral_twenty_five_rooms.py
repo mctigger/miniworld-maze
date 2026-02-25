@@ -1,19 +1,10 @@
 """SpiralTwentyFiveRooms environment implementation."""
 
-from typing import List, Optional, Union
-
 from ..core import ObservationLevel
 from ..core.constants import (
-    AGENT_START_POSITION,
-    BOX_GRID_SIZE,
-    BOX_OFFSET_FRACTION,
-    BOX_SIZE_FRACTION,
-    BOXES_PER_ROOM,
     ROOM_BOUNDARY_MARGIN,
-    ROOM_CENTER_FRACTION,
     TextureThemes,
 )
-from ..core import COLORS, Box
 from .base_grid_rooms import GridRoomsEnvironment
 from .twenty_five_rooms import TwentyFiveRooms
 
@@ -42,6 +33,7 @@ class SpiralTwentyFiveRooms(GridRoomsEnvironment):
         placed_room=None,
         obs_level=ObservationLevel.TOP_DOWN_PARTIAL,
         continuous=False,
+        move_scale: float = 1.0,
         room_size=15,
         door_size=2.5,
         agent_mode=None,
@@ -96,6 +88,7 @@ class SpiralTwentyFiveRooms(GridRoomsEnvironment):
             placed_room=placed_room,
             obs_level=obs_level,
             continuous=continuous,
+            move_scale=move_scale,
             room_size=room_size,
             door_size=door_size,
             agent_mode=agent_mode,

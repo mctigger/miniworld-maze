@@ -10,7 +10,11 @@ from miniworld_maze.environments.spiral_twenty_five_rooms import SpiralTwentyFiv
 
 from gymnasium.envs.registration import register
 from miniworld_maze.core import ObservationLevel
-from miniworld_maze.core.constants import FACTORY_DOOR_SIZE, FACTORY_ROOM_SIZE, MAX_EPISODE_STEPS
+from miniworld_maze.core.constants import (
+    FACTORY_DOOR_SIZE,
+    FACTORY_ROOM_SIZE,
+    MAX_EPISODE_STEPS,
+)
 
 __all__ = [
     "GridRoomsEnvironment",

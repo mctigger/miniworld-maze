@@ -79,7 +79,10 @@ class FrameBuffer:
                 GL_RENDERBUFFER, num_samples, GL_DEPTH_COMPONENT16, width, height
             )
             glFramebufferRenderbuffer(
-                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, self.multi_depth_rb
+                GL_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT,
+                GL_RENDERBUFFER,
+                self.multi_depth_rb,
             )
 
             # Check that the frame buffer creation succeeded
@@ -106,7 +109,10 @@ class FrameBuffer:
             glBindRenderbuffer(GL_RENDERBUFFER, self.multi_depth_rb)
             glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height)
             glFramebufferRenderbuffer(
-                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, self.multi_depth_rb
+                GL_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT,
+                GL_RENDERBUFFER,
+                self.multi_depth_rb,
             )
 
         # Sanity check

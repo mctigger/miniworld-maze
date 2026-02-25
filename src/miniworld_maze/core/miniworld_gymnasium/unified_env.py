@@ -133,6 +133,7 @@ class UnifiedMiniWorldEnv(gym.Env):
         obs_level=3,
         continuous=False,
         agent_mode="circle",
+        move_scale: float = 1.0,
         obs_width=80,
         obs_height=80,
         window_width=DEFAULT_WINDOW_WIDTH,
@@ -149,6 +150,8 @@ class UnifiedMiniWorldEnv(gym.Env):
             obs_level: Observation level (1=TOP_DOWN_PARTIAL, 2=TOP_DOWN_FULL, 3=FIRST_PERSON)
             continuous: Whether to use continuous actions
             agent_mode: Agent rendering mode ('triangle', 'circle', 'empty')
+            move_scale: Movement scaling factor applied to forward/backward motion.
+                1.0 keeps default movement distance, 0.1 makes movement 10% of default.
             obs_width: Observation width in pixels
             obs_height: Observation height in pixels
             window_width: Window width for human rendering
@@ -162,6 +165,9 @@ class UnifiedMiniWorldEnv(gym.Env):
         self.obs_level = obs_level
         self.agent_mode = agent_mode
         self.continuous = continuous
+        if move_scale < 0:
+            raise ValueError(f"move_scale must be >= 0, got {move_scale}")
+        self.move_scale = float(move_scale)
         self.params = params
         self.domain_rand = domain_rand
         self.info_obs = info_obs
@@ -598,16 +604,19 @@ class UnifiedMiniWorldEnv(gym.Env):
 
     def _handle_continuous_action(self, action):
         """Handle continuous action processing."""
+        scaled_fwd = action[0] * self.move_scale
         if self.agent.mode == "circle":
-            self.pos_agent(action[0], 180 * action[1])
+            self.pos_agent(scaled_fwd, 180 * action[1])
         else:
-            self.turn_and_move_agent(action[0], 15 * action[1])
+            self.turn_and_move_agent(scaled_fwd, 15 * action[1])
 
     def _handle_discrete_action(self, action):
         """Handle discrete action processing."""
         rand = self.rand if self.domain_rand else None
         fwd_step = self.params.sample(rand, "forward_step")
         fwd_drift = self.params.sample(rand, "forward_drift")
+        fwd_step *= self.move_scale
+        fwd_drift *= self.move_scale
         turn_step = self.params.sample(rand, "turn_step")
 
         if action == self.actions.move_forward:

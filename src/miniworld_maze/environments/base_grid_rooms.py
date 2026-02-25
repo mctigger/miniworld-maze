@@ -40,6 +40,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         placed_room: Optional[int] = None,
         obs_level: ObservationLevel = ObservationLevel.TOP_DOWN_PARTIAL,
         continuous: bool = False,
+        move_scale: float = 1.0,
         room_size: Union[int, float] = DEFAULT_ROOM_SIZE,
         door_size: Union[int, float] = DEFAULT_DOOR_SIZE,
         agent_mode: Optional[str] = None,
@@ -60,6 +61,8 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             placed_room: Initial room index (defaults to 0)
             obs_level: Observation level (defaults to 1)
             continuous: Whether to use continuous actions (defaults to False)
+            move_scale: Movement scaling factor. 1.0 keeps default movement distance,
+                0.1 makes movement 10% of default.
             room_size: Size of each room in environment units (defaults to 5)
             door_size: Size of doors between rooms (defaults to 2)
             agent_mode: Agent rendering mode ('triangle', 'circle', 'empty')
@@ -80,7 +83,9 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         # Validate and set connections
         # Single room environments (grid_size=1) don't need connections
         if self.total_rooms > 1:
-            assert len(connections) > 0, "Connection between rooms should be more than 1"
+            assert len(connections) > 0, (
+                "Connection between rooms should be more than 1"
+            )
         self.connections = connections
 
         # Validate and set textures
@@ -128,6 +133,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
             obs_level=obs_level,
             continuous=continuous,
             agent_mode=self.agent_mode,
+            move_scale=move_scale,
             obs_width=obs_width,
             obs_height=obs_height,
             render_mode=render_mode,
@@ -208,9 +214,7 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
 
                     # Calculate unique color index for variety
                     # Use %9 to match original drstrategy implementation
-                    color_index = (
-                        box_index + 1 + (room_row + 1) * (room_col + 1)
-                    ) % 9
+                    color_index = (box_index + 1 + (room_row + 1) * (room_col + 1)) % 9
                     box_color = available_colors[color_index]
 
                     # Calculate box position within room
@@ -255,7 +259,9 @@ class GridRoomsEnvironment(UnifiedMiniWorldEnv):
         info["goal_position"] = np.array([goal_pos[0], goal_pos[2]])  # x, z
 
         # Add distance to goal (L1, same metric used for goal achievement check)
-        info["distance_to_goal"] = np.sum(np.abs(np.array(agent_pos) - np.array(goal_pos)))
+        info["distance_to_goal"] = np.sum(
+            np.abs(np.array(agent_pos) - np.array(goal_pos))
+        )
 
         # Return observation as dict
         obs_dict = self._build_observation_dict(obs)
